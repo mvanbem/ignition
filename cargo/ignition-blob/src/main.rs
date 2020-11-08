@@ -2,7 +2,7 @@ use crate::file_system::{tokio::tokio_file_system, FileSystem};
 use bytes::buf::BufExt;
 use sha2::{Digest, Sha256};
 use std::io::{self, Read, SeekFrom};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::prelude::*;
 use warp::Filter;
 
@@ -53,8 +53,7 @@ where
     F: FileSystem + 'static,
 {
     let path = path_for_id(&id);
-    let fut_file = file_system.open(AsRef::<Path>::as_ref(&path));
-    let mut file = match fut_file.await {
+    let mut file = match file_system.open(&path).await {
         Ok(file) => file,
         Err(e) => match e.kind() {
             io::ErrorKind::NotFound => return Err(warp::reject::not_found()),
@@ -102,16 +101,14 @@ where
 {
     // Allocate a temporary file and get its path.
     let temp_path = {
-        let fut = file_system.make_temporary_file();
-        fut.await.map_err(|e| {
+        file_system.make_temporary_file().await.map_err(|e| {
             log::error!("unexpected error making temporary file: {}", e);
             internal_server_error()
         })?
     };
     // Open the temporary file for use as a streaming destination.
     let mut temp_file = {
-        let fut = file_system.create(&temp_path);
-        fut.await.map_err(|e| {
+        file_system.create(&temp_path).await.map_err(|e| {
             log::error!(
                 "unexpected error opening temporary file {:?}: {}",
                 temp_path,
@@ -138,8 +135,7 @@ where
         }
         let buf = &buf[..n];
         hasher.update(buf);
-        let fut = temp_file.write_all(&buf);
-        fut.await.map_err(|e| {
+        temp_file.write_all(&buf).await.map_err(|e| {
             log::error!("unexpected error writing temporary file: {}", e);
             internal_server_error()
         })?;
@@ -155,8 +151,7 @@ where
     // Flush and close the temporary file. A successful call to
     // flush() ensures the file will be closed immediately when it's
     // dropped.
-    let fut = temp_file.flush();
-    fut.await.map_err(|e| {
+    temp_file.flush().await.map_err(|e| {
         log::error!("unexpected error flushing temporary file: {}", e);
         internal_server_error()
     })?;
@@ -164,8 +159,7 @@ where
 
     // Rename the temporary file into its destination.
     let parent_dir = dest_path.parent().unwrap();
-    let fut = file_system.create_dir_all(parent_dir);
-    fut.await.map_err(|e| {
+    file_system.create_dir_all(parent_dir).await.map_err(|e| {
         log::error!(
             "unexpected error creating destination directory {:?}: {}",
             parent_dir,
@@ -173,16 +167,18 @@ where
         );
         internal_server_error()
     })?;
-    let fut = file_system.rename(&temp_path, &dest_path);
-    fut.await.map_err(|e| {
-        log::error!(
-            "unexpected error renaming temporary file from {:?} to {:?}: {}",
-            temp_path,
-            dest_path,
-            e,
-        );
-        internal_server_error()
-    })?;
+    file_system
+        .rename(&temp_path, &dest_path)
+        .await
+        .map_err(|e| {
+            log::error!(
+                "unexpected error renaming temporary file from {:?} to {:?}: {}",
+                temp_path,
+                dest_path,
+                e,
+            );
+            internal_server_error()
+        })?;
 
     Ok(http::Response::builder()
         .status(200)

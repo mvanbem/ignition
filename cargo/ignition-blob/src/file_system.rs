@@ -5,8 +5,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 #[async_trait]
-pub trait FileSystem: Clone + Send {
-    type File: AsyncRead + AsyncSeek + AsyncWrite + Send + Unpin;
+pub trait FileSystem: Clone + Send + Sync {
+    type File: AsyncRead + AsyncSeek + AsyncWrite + Send + Sync + Unpin;
     async fn open(&self, path: &Path) -> io::Result<Self::File>;
     async fn create(&self, path: &Path) -> io::Result<Self::File>;
     async fn make_temporary_file(&self) -> io::Result<PathBuf>;
