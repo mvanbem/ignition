@@ -1,9 +1,9 @@
 use crate::file_system::{tokio::tokio_file_system, FileSystem};
-use bytes::buf::BufExt;
 use sha2::{Digest, Sha256};
 use std::io::{self, Read, SeekFrom};
 use std::path::PathBuf;
 use tokio::prelude::*;
+use tokio_compat_02::FutureExt;
 use warp::Filter;
 
 mod file_system;
@@ -19,6 +19,7 @@ async fn main() {
         .unwrap();
     warp::serve(filter(tokio_file_system()))
         .run(([127, 0, 0, 1], 3030))
+        .compat()
         .await;
 }
 
@@ -94,9 +95,25 @@ where
         .unwrap())
 }
 
+struct WarpBufReader<T: warp::Buf> {
+    buf: T,
+}
+impl<T: warp::Buf> WarpBufReader<T> {
+    fn new(buf: T) -> WarpBufReader<T> {
+        WarpBufReader { buf }
+    }
+}
+impl<T: warp::Buf> Read for WarpBufReader<T> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let len = std::cmp::min(self.buf.remaining(), buf.len());
+        warp::Buf::copy_to_slice(&mut self.buf, &mut buf[0..len]);
+        Ok(len)
+    }
+}
+
 async fn post_blob<B, F>(body: B, file_system: F) -> Result<impl warp::Reply, warp::Rejection>
 where
-    B: bytes::Buf,
+    B: warp::Buf,
     F: FileSystem + 'static,
 {
     // Allocate a temporary file and get its path.
@@ -120,7 +137,7 @@ where
 
     // Stream the request body both to a hasher and to the temporary
     // file.
-    let mut body = body.reader();
+    let mut body = WarpBufReader::new(body);
     let mut hasher = Sha256::new();
     // TODO: tune buffer size
     let mut buf = [0; 4096];

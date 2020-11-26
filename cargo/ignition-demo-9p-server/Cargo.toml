@@ -1,0 +1,30 @@
+[package]
+name = "ignition-demo-9p-server"
+version = "0.1.0"
+authors = ["Michael VanBemmel <michael.vanbemmel@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytes = "0.6.0"
+clap = "2.33.3"
+lazy_static = "1.4.0"
+log = "0.4.11"
+pin-utils = "0.1.0"
+simple_logger = "1.11.0"
+
+[dependencies.futures-util]
+version = "0.3.8"
+features = ["sink"]
+
+[dependencies.ignition-9p]
+path = "../ignition-9p"
+
+[dependencies.tokio]
+version = "0.3.4"
+features = ["macros", "net", "rt-multi-thread", "sync"]
+
+[dependencies.tokio-util]
+version = "0.5.0"
+features = ["codec"]

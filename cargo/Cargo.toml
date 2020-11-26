@@ -2,4 +2,5 @@
 members = [
     "ignition-9p",
     "ignition-blob",
+    "ignition-demo-9p-server",
 ]

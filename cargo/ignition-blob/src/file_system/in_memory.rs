@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
-use tokio::io::AsyncSeek;
+use tokio::io::{AsyncSeek, ReadBuf};
 use tokio::prelude::*;
 
 #[derive(Clone)]
@@ -112,19 +112,21 @@ pub struct InMemoryFile(Arc<Mutex<Cursor<Vec<u8>>>>);
 impl AsyncRead for InMemoryFile {
     fn poll_read(
         self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        Poll::Ready(io::Read::read(&mut *self.0.lock().unwrap(), buf))
+        _cx: &mut Context,
+        buf: &mut ReadBuf,
+    ) -> Poll<io::Result<()>> {
+        // TODO(perf): Use unsafe to avoid initializing the buffer.
+        let n = match io::Read::read(&mut *self.0.lock().unwrap(), buf.initialize_unfilled()) {
+            Ok(n) => n,
+            Err(e) => return Poll::Ready(Err(e)),
+        };
+        buf.advance(n);
+        Poll::Ready(Ok(()))
     }
 }
 impl AsyncSeek for InMemoryFile {
-    fn start_seek(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        position: SeekFrom,
-    ) -> Poll<io::Result<()>> {
-        Poll::Ready(io::Seek::seek(&mut *self.0.lock().unwrap(), position).map(drop))
+    fn start_seek(self: Pin<&mut Self>, position: SeekFrom) -> io::Result<()> {
+        io::Seek::seek(&mut *self.0.lock().unwrap(), position).map(drop)
     }
     fn poll_complete(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<u64>> {
         Poll::Ready(Ok(self.0.lock().unwrap().position()))
