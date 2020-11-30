@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["ignition_9p"] = [{"text":"impl BitXorAssign&lt;FileType&gt; for FileType","synthetic":false,"types":[]},{"text":"impl BitXorAssign&lt;OpenMode&gt; for OpenMode","synthetic":false,"types":[]},{"text":"impl BitXorAssign&lt;OpenAccess&gt; for OpenAccess","synthetic":false,"types":[]},{"text":"impl BitXorAssign&lt;StatMode&gt; for StatMode","synthetic":false,"types":[]},{"text":"impl BitXorAssign&lt;UnixTriplet&gt; for UnixTriplet","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

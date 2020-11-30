@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["ignition_9p"] = [{"text":"impl Copy for Fid","synthetic":false,"types":[]},{"text":"impl Copy for FileType","synthetic":false,"types":[]},{"text":"impl Copy for MessageType","synthetic":false,"types":[]},{"text":"impl Copy for OpenMode","synthetic":false,"types":[]},{"text":"impl Copy for OpenAccess","synthetic":false,"types":[]},{"text":"impl Copy for Qid","synthetic":false,"types":[]},{"text":"impl Copy for StatMode","synthetic":false,"types":[]},{"text":"impl Copy for Tag","synthetic":false,"types":[]},{"text":"impl Copy for UnixTriplet","synthetic":false,"types":[]}];
+implementors["ignition_blob"] = [{"text":"impl Copy for TokioFileSystem","synthetic":false,"types":[]},{"text":"impl Copy for HashAlgorithm","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

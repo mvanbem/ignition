@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["ignition_9p"] = [{"text":"impl Default for FileType","synthetic":false,"types":[]},{"text":"impl Default for OpenMode","synthetic":false,"types":[]},{"text":"impl Default for StatMode","synthetic":false,"types":[]},{"text":"impl Default for UnixTriplet","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
