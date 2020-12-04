@@ -1,13 +1,15 @@
 //! Message types.
 
-use crate::ext::{ReadBytesExt, WriteBytesExt};
+use crate::wire::{
+    BorrowedCountPrefixedList, BorrowedLengthPrefixed, OwnedCountPrefixedList, OwnedLengthPrefixed,
+    ReadWireFormat, WriteWireFormat,
+};
 use crate::{Fid, OpenMode, Qid, Stat, Tag};
-use std::io;
+use std::io::{self, Read, Write};
 
 pub mod raw {
-    use crate::ext::{ReadBytesExt, WriteBytesExt};
-    use crate::Tag;
-    use std::io;
+    use crate::wire::{ReadWireFormat, WriteWireFormat};
+    use std::io::{self, Read, Write};
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct MessageType(pub u8);
@@ -40,61 +42,15 @@ pub mod raw {
         pub const RSTAT: MessageType = MessageType(125);
         pub const TWSTAT: MessageType = MessageType(126);
         pub const RWSTAT: MessageType = MessageType(127);
-
-        pub fn read<R: io::Read>(r: &mut R) -> io::Result<MessageType> {
-            Ok(MessageType(r.read_u8()?))
-        }
-
-        pub fn write<W: io::Write>(self, w: &mut W) -> io::Result<()> {
-            w.write_u8(self.0)
+    }
+    impl ReadWireFormat for MessageType {
+        fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+            Ok(MessageType(ReadWireFormat::read_from(r)?))
         }
     }
-
-    #[derive(Clone, Debug, Eq, PartialEq)]
-    pub struct Header {
-        pub message_type: MessageType,
-        pub tag: Tag,
-    }
-    impl Header {
-        pub fn read<R: io::Read>(r: &mut R) -> io::Result<Header> {
-            let message_type = MessageType::read(r)?;
-            let tag = Tag::read(r)?;
-            Ok(Header { message_type, tag })
-        }
-
-        pub fn write<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
-            self.message_type.write(w)?;
-            self.tag.write(w)
-        }
-    }
-    #[cfg(test)]
-    mod tests {
-        use super::{Header, MessageType};
-        use crate::Tag;
-        use std::io;
-
-        #[test]
-        fn header_read() {
-            let mut data = io::Cursor::new([100, 0xcd, 0xab]);
-            assert_eq!(
-                Header::read(&mut data).unwrap(),
-                Header {
-                    message_type: MessageType::TVERSION,
-                    tag: Tag(0xabcd),
-                },
-            );
-        }
-
-        #[test]
-        fn header_write() {
-            let mut data = vec![];
-            Header {
-                message_type: MessageType::RVERSION,
-                tag: Tag(0x1234),
-            }
-            .write(&mut data)
-            .unwrap();
-            assert_eq!(data, &[101, 0x34, 0x12]);
+    impl WriteWireFormat for MessageType {
+        fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+            self.0.write_to(w)
         }
     }
 }
@@ -104,114 +60,36 @@ pub struct Message {
     pub tag: Tag,
     pub body: MessageBody,
 }
-impl Message {
-    pub fn read<R: io::Read>(r: &mut R) -> io::Result<Message> {
-        let header = raw::Header::read(r)?;
+impl ReadWireFormat for Message {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let message_type = ReadWireFormat::read_from(r)?;
+        let tag = ReadWireFormat::read_from(r)?;
+
         Ok(Message {
-            tag: header.tag,
-            body: match header.message_type {
-                raw::MessageType::TVERSION => {
-                    let msize = r.read_u32()?;
-                    let version = r.read_string()?;
-                    MessageBody::TVersion(TVersion { msize, version })
-                }
-                raw::MessageType::RVERSION => {
-                    let msize = r.read_u32()?;
-                    let version = r.read_string()?;
-                    MessageBody::RVersion(RVersion { msize, version })
-                }
-                raw::MessageType::TATTACH => {
-                    let fid = Fid::read(r)?;
-                    let afid = Fid::read(r)?;
-                    let uname = r.read_string()?;
-                    let aname = r.read_string()?;
-                    MessageBody::TAttach(TAttach {
-                        fid,
-                        afid,
-                        uname,
-                        aname,
-                    })
-                }
-                raw::MessageType::RATTACH => MessageBody::RAttach(RAttach { qid: Qid::read(r)? }),
-                raw::MessageType::RERROR => MessageBody::RError(RError {
-                    ename: r.read_string()?,
-                }),
-                raw::MessageType::TWALK => {
-                    let fid = Fid::read(r)?;
-                    let newfid = Fid::read(r)?;
-                    let names = r.read_array(|r| r.read_string())?;
-                    MessageBody::TWalk(TWalk { fid, newfid, names })
-                }
-                raw::MessageType::RWALK => MessageBody::RWalk(RWalk {
-                    qids: r.read_array(|r| Qid::read(r))?,
-                }),
-                raw::MessageType::TOPEN => {
-                    let fid = Fid::read(r)?;
-                    let mode = OpenMode(r.read_u8()?);
-                    MessageBody::TOpen(TOpen { fid, mode })
-                }
-                raw::MessageType::ROPEN => {
-                    let qid = Qid::read(r)?;
-                    let iounit = r.read_u32()?;
-                    MessageBody::ROpen(ROpen { qid, iounit })
-                }
-                raw::MessageType::TCREATE => {
-                    let fid = Fid::read(r)?;
-                    let name = r.read_string()?;
-                    let perm = r.read_u32()?;
-                    let mode = OpenMode(r.read_u8()?);
-                    MessageBody::TCreate(TCreate {
-                        fid,
-                        name,
-                        perm,
-                        mode,
-                    })
-                }
-                raw::MessageType::RCREATE => {
-                    let qid = Qid::read(r)?;
-                    let iounit = r.read_u32()?;
-                    MessageBody::RCreate(RCreate { qid, iounit })
-                }
-                raw::MessageType::TREAD => {
-                    let fid = Fid::read(r)?;
-                    let offset = r.read_u64()?;
-                    let count = r.read_u32()?;
-                    MessageBody::TRead(TRead { fid, offset, count })
-                }
-                raw::MessageType::RREAD => {
-                    let data = r.read_u32_prefixed_bytes()?;
-                    MessageBody::RRead(RRead { data })
-                }
-                raw::MessageType::TWRITE => {
-                    let fid = Fid::read(r)?;
-                    let offset = r.read_u64()?;
-                    let data = r.read_u32_prefixed_bytes()?;
-                    MessageBody::TWrite(TWrite { fid, offset, data })
-                }
-                raw::MessageType::RWRITE => {
-                    let count = r.read_u32()?;
-                    MessageBody::RWrite(RWrite { count })
-                }
-                raw::MessageType::TCLUNK => {
-                    let fid = Fid::read(r)?;
-                    MessageBody::TClunk(TClunk { fid })
-                }
+            tag,
+            body: match message_type {
+                raw::MessageType::TVERSION => MessageBody::TVersion(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RVERSION => MessageBody::RVersion(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TATTACH => MessageBody::TAttach(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RATTACH => MessageBody::RAttach(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RERROR => MessageBody::RError(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TWALK => MessageBody::TWalk(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RWALK => MessageBody::RWalk(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TOPEN => MessageBody::TOpen(ReadWireFormat::read_from(r)?),
+                raw::MessageType::ROPEN => MessageBody::ROpen(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TCREATE => MessageBody::TCreate(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RCREATE => MessageBody::RCreate(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TREAD => MessageBody::TRead(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RREAD => MessageBody::RRead(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TWRITE => MessageBody::TWrite(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RWRITE => MessageBody::RWrite(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TCLUNK => MessageBody::TClunk(ReadWireFormat::read_from(r)?),
                 raw::MessageType::RCLUNK => MessageBody::RClunk,
-                raw::MessageType::TSTAT => {
-                    let fid = Fid::read(r)?;
-                    MessageBody::TStat(TStat { fid })
-                }
-                raw::MessageType::RSTAT => {
-                    let stat = Stat::read(r)?;
-                    MessageBody::RStat(RStat { stat })
-                }
-                raw::MessageType::TWSTAT => {
-                    let fid = Fid::read(r)?;
-                    let stat = Stat::read(r)?;
-                    MessageBody::TWstat(TWstat { fid, stat })
-                }
+                raw::MessageType::TSTAT => MessageBody::TStat(ReadWireFormat::read_from(r)?),
+                raw::MessageType::RSTAT => MessageBody::RStat(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TWSTAT => MessageBody::TWstat(ReadWireFormat::read_from(r)?),
                 raw::MessageType::RWSTAT => MessageBody::RWstat,
-                message_type => {
+                _ => {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,
                         ReadMessageError::UnsupportedMessageType { message_type },
@@ -220,92 +98,32 @@ impl Message {
             },
         })
     }
-
-    pub fn write<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
-        raw::Header {
-            message_type: self.body.message_type(),
-            tag: self.tag,
-        }
-        .write(w)?;
-        match self.body {
-            MessageBody::TVersion(TVersion { msize, ref version }) => {
-                w.write_u32(msize)?;
-                w.write_string(version)
-            }
-            MessageBody::RVersion(RVersion { msize, ref version }) => {
-                w.write_u32(msize)?;
-                w.write_string(version)
-            }
-            MessageBody::TAttach(TAttach {
-                fid,
-                afid,
-                ref uname,
-                ref aname,
-            }) => {
-                fid.write(w)?;
-                afid.write(w)?;
-                w.write_string(uname)?;
-                w.write_string(aname)
-            }
-            MessageBody::RAttach(RAttach { qid }) => qid.write(w),
-            MessageBody::RError(RError { ref ename }) => w.write_string(ename),
-            MessageBody::TWalk(TWalk {
-                fid,
-                newfid,
-                ref names,
-            }) => {
-                fid.write(w)?;
-                newfid.write(w)?;
-                w.write_array(names, |w, name| w.write_string(name))
-            }
-            MessageBody::RWalk(RWalk { ref qids }) => w.write_array(qids, |w, qid| qid.write(w)),
-            MessageBody::TOpen(TOpen { fid, mode }) => {
-                fid.write(w)?;
-                w.write_u8(mode.into())
-            }
-            MessageBody::ROpen(ROpen { qid, iounit }) => {
-                qid.write(w)?;
-                w.write_u32(iounit)
-            }
-            MessageBody::TCreate(TCreate {
-                fid,
-                ref name,
-                perm,
-                mode,
-            }) => {
-                fid.write(w)?;
-                w.write_string(name)?;
-                w.write_u32(perm)?;
-                w.write_u8(mode.into())
-            }
-            MessageBody::RCreate(RCreate { qid, iounit }) => {
-                qid.write(w)?;
-                w.write_u32(iounit)
-            }
-            MessageBody::TRead(TRead { fid, offset, count }) => {
-                fid.write(w)?;
-                w.write_u64(offset)?;
-                w.write_u32(count)
-            }
-            MessageBody::RRead(RRead { ref data }) => w.write_u32_prefixed_bytes(data),
-            MessageBody::TWrite(TWrite {
-                fid,
-                offset,
-                ref data,
-            }) => {
-                fid.write(w)?;
-                w.write_u64(offset)?;
-                w.write_u32_prefixed_bytes(data)
-            }
-            MessageBody::RWrite(RWrite { count }) => w.write_u32(count),
-            MessageBody::TClunk(TClunk { fid }) => fid.write(w),
+}
+impl WriteWireFormat for Message {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.body.message_type().write_to(w)?;
+        self.tag.write_to(w)?;
+        match &self.body {
+            MessageBody::TVersion(v) => v.write_to(w),
+            MessageBody::RVersion(v) => v.write_to(w),
+            MessageBody::TAttach(v) => v.write_to(w),
+            MessageBody::RAttach(v) => v.write_to(w),
+            MessageBody::RError(v) => v.write_to(w),
+            MessageBody::TWalk(v) => v.write_to(w),
+            MessageBody::RWalk(v) => v.write_to(w),
+            MessageBody::TOpen(v) => v.write_to(w),
+            MessageBody::ROpen(v) => v.write_to(w),
+            MessageBody::TCreate(v) => v.write_to(w),
+            MessageBody::RCreate(v) => v.write_to(w),
+            MessageBody::TRead(v) => v.write_to(w),
+            MessageBody::RRead(v) => v.write_to(w),
+            MessageBody::TWrite(v) => v.write_to(w),
+            MessageBody::RWrite(v) => v.write_to(w),
+            MessageBody::TClunk(v) => v.write_to(w),
             MessageBody::RClunk => Ok(()),
-            MessageBody::TStat(TStat { fid }) => fid.write(w),
-            MessageBody::RStat(RStat { ref stat }) => stat.write(w),
-            MessageBody::TWstat(TWstat { fid, ref stat }) => {
-                fid.write(w)?;
-                stat.write(w)
-            }
+            MessageBody::TStat(v) => v.write_to(w),
+            MessageBody::RStat(v) => v.write_to(w),
+            MessageBody::TWstat(v) => v.write_to(w),
             MessageBody::RWstat => Ok(()),
         }
     }
@@ -383,11 +201,37 @@ pub struct TVersion {
     pub msize: u32,
     pub version: String,
 }
+impl ReadWireFormat for TVersion {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let msize = ReadWireFormat::read_from(r)?;
+        let version = ReadWireFormat::read_from(r)?;
+        Ok(TVersion { msize, version })
+    }
+}
+impl WriteWireFormat for TVersion {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.msize.write_to(w)?;
+        self.version.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RVersion {
     pub msize: u32,
     pub version: String,
+}
+impl ReadWireFormat for RVersion {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let msize = ReadWireFormat::read_from(r)?;
+        let version = ReadWireFormat::read_from(r)?;
+        Ok(RVersion { msize, version })
+    }
+}
+impl WriteWireFormat for RVersion {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.msize.write_to(w)?;
+        self.version.write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -397,15 +241,61 @@ pub struct TAttach {
     pub uname: String,
     pub aname: String,
 }
+impl ReadWireFormat for TAttach {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let afid = ReadWireFormat::read_from(r)?;
+        let uname = ReadWireFormat::read_from(r)?;
+        let aname = ReadWireFormat::read_from(r)?;
+        Ok(TAttach {
+            fid,
+            afid,
+            uname,
+            aname,
+        })
+    }
+}
+impl WriteWireFormat for TAttach {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.afid.write_to(w)?;
+        self.uname.write_to(w)?;
+        self.aname.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RAttach {
     pub qid: Qid,
 }
+impl ReadWireFormat for RAttach {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RAttach {
+            qid: ReadWireFormat::read_from(r)?,
+        })
+    }
+}
+impl WriteWireFormat for RAttach {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.qid.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RError {
     pub ename: String,
+}
+impl ReadWireFormat for RError {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RError {
+            ename: ReadWireFormat::read_from(r)?,
+        })
+    }
+}
+impl WriteWireFormat for RError {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.ename.write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -414,10 +304,37 @@ pub struct TWalk {
     pub newfid: Fid,
     pub names: Vec<String>,
 }
+impl ReadWireFormat for TWalk {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let newfid = ReadWireFormat::read_from(r)?;
+        let names = OwnedCountPrefixedList::<u16, _>::read_from(r)?.into_inner();
+        Ok(TWalk { fid, newfid, names })
+    }
+}
+impl WriteWireFormat for TWalk {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.newfid.write_to(w)?;
+        BorrowedCountPrefixedList::<u16, _>::new(&self.names).write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RWalk {
     pub qids: Vec<Qid>,
+}
+impl ReadWireFormat for RWalk {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RWalk {
+            qids: OwnedCountPrefixedList::<u16, _>::read_from(r)?.into_inner(),
+        })
+    }
+}
+impl WriteWireFormat for RWalk {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        BorrowedCountPrefixedList::<u16, _>::new(&self.qids).write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -425,11 +342,37 @@ pub struct TOpen {
     pub fid: Fid,
     pub mode: OpenMode,
 }
+impl ReadWireFormat for TOpen {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let mode = ReadWireFormat::read_from(r)?;
+        Ok(TOpen { fid, mode })
+    }
+}
+impl WriteWireFormat for TOpen {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.mode.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ROpen {
     pub qid: Qid,
     pub iounit: u32,
+}
+impl ReadWireFormat for ROpen {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let qid = ReadWireFormat::read_from(r)?;
+        let iounit = ReadWireFormat::read_from(r)?;
+        Ok(ROpen { qid, iounit })
+    }
+}
+impl WriteWireFormat for ROpen {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.qid.write_to(w)?;
+        self.iounit.write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -439,11 +382,46 @@ pub struct TCreate {
     pub perm: u32,
     pub mode: OpenMode,
 }
+impl ReadWireFormat for TCreate {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let name = ReadWireFormat::read_from(r)?;
+        let perm = ReadWireFormat::read_from(r)?;
+        let mode = ReadWireFormat::read_from(r)?;
+        Ok(TCreate {
+            fid,
+            name,
+            perm,
+            mode,
+        })
+    }
+}
+impl WriteWireFormat for TCreate {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.name.write_to(w)?;
+        self.perm.write_to(w)?;
+        self.mode.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RCreate {
     pub qid: Qid,
     pub iounit: u32,
+}
+impl ReadWireFormat for RCreate {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let qid = ReadWireFormat::read_from(r)?;
+        let iounit = ReadWireFormat::read_from(r)?;
+        Ok(RCreate { qid, iounit })
+    }
+}
+impl WriteWireFormat for RCreate {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.qid.write_to(w)?;
+        self.iounit.write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -452,10 +430,37 @@ pub struct TRead {
     pub offset: u64,
     pub count: u32,
 }
+impl ReadWireFormat for TRead {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let offset = ReadWireFormat::read_from(r)?;
+        let count = ReadWireFormat::read_from(r)?;
+        Ok(TRead { fid, offset, count })
+    }
+}
+impl WriteWireFormat for TRead {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.offset.write_to(w)?;
+        self.count.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RRead {
     pub data: Vec<u8>,
+}
+impl ReadWireFormat for RRead {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RRead {
+            data: OwnedCountPrefixedList::<u32, _>::read_from(r)?.into_inner(),
+        })
+    }
+}
+impl WriteWireFormat for RRead {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        BorrowedCountPrefixedList::<u32, _>::new(&self.data).write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -464,25 +469,88 @@ pub struct TWrite {
     pub offset: u64,
     pub data: Vec<u8>,
 }
+impl ReadWireFormat for TWrite {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let offset = ReadWireFormat::read_from(r)?;
+        let data = OwnedCountPrefixedList::<u32, _>::read_from(r)?.into_inner();
+        Ok(TWrite { fid, offset, data })
+    }
+}
+impl WriteWireFormat for TWrite {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.offset.write_to(w)?;
+        BorrowedCountPrefixedList::<u32, _>::new(&self.data).write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RWrite {
     pub count: u32,
+}
+impl ReadWireFormat for RWrite {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RWrite {
+            count: ReadWireFormat::read_from(r)?,
+        })
+    }
+}
+impl WriteWireFormat for RWrite {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.count.write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TClunk {
     pub fid: Fid,
 }
+impl ReadWireFormat for TClunk {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(TClunk {
+            fid: ReadWireFormat::read_from(r)?,
+        })
+    }
+}
+impl WriteWireFormat for TClunk {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TStat {
     pub fid: Fid,
 }
+impl ReadWireFormat for TStat {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(TStat {
+            fid: ReadWireFormat::read_from(r)?,
+        })
+    }
+}
+impl WriteWireFormat for TStat {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RStat {
     pub stat: Stat,
+}
+impl ReadWireFormat for RStat {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(RStat {
+            stat: OwnedLengthPrefixed::<u16, _>::read_from(r)?.into_inner(),
+        })
+    }
+}
+impl WriteWireFormat for RStat {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        BorrowedLengthPrefixed::<u16, _>::new(&self.stat).write_to(w)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -490,11 +558,25 @@ pub struct TWstat {
     pub fid: Fid,
     pub stat: Stat,
 }
+impl ReadWireFormat for TWstat {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let fid = ReadWireFormat::read_from(r)?;
+        let stat = ReadWireFormat::read_from(r)?;
+        Ok(TWstat { fid, stat })
+    }
+}
+impl WriteWireFormat for TWstat {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.fid.write_to(w)?;
+        self.stat.write_to(w)
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{Message, MessageBody, RError, RVersion, TVersion};
-    use crate::Tag;
+    use super::{Message, MessageBody, RError, RStat, RVersion, TVersion};
+    use crate::wire::{ReadWireFormat, WriteWireFormat};
+    use crate::{FileType, Qid, Stat, StatMode, Tag};
     use std::io;
 
     #[test]
@@ -503,7 +585,7 @@ mod tests {
             100, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,
         ]);
         assert_eq!(
-            Message::read(&mut data).unwrap(),
+            Message::read_from(&mut data).unwrap(),
             Message {
                 tag: Tag(0xabcd),
                 body: MessageBody::TVersion(TVersion {
@@ -524,7 +606,7 @@ mod tests {
                 version: "9P2000".to_string(),
             }),
         }
-        .write(&mut data)
+        .write_to(&mut data)
         .unwrap();
         assert_eq!(
             data.as_slice(),
@@ -541,7 +623,7 @@ mod tests {
             101, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,
         ]);
         assert_eq!(
-            Message::read(&mut data).unwrap(),
+            Message::read_from(&mut data).unwrap(),
             Message {
                 tag: Tag(0xabcd),
                 body: MessageBody::RVersion(RVersion {
@@ -562,7 +644,7 @@ mod tests {
                 version: "9P2000".to_string(),
             }),
         }
-        .write(&mut data)
+        .write_to(&mut data)
         .unwrap();
         assert_eq!(
             data.as_slice(),
@@ -579,7 +661,7 @@ mod tests {
             107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65,
         ]);
         assert_eq!(
-            Message::read(&mut data).unwrap(),
+            Message::read_from(&mut data).unwrap(),
             Message {
                 tag: Tag(0xabcd),
                 body: MessageBody::RError(RError {
@@ -598,11 +680,78 @@ mod tests {
                 ename: "it broke".to_string(),
             }),
         }
-        .write(&mut data)
+        .write_to(&mut data)
         .unwrap();
         assert_eq!(
             data.as_slice(),
             [107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65],
+        );
+    }
+
+    #[test]
+    fn message_rstat_read() {
+        let mut data = io::Cursor::new([
+            107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65,
+        ]);
+        assert_eq!(
+            Message::read_from(&mut data).unwrap(),
+            Message {
+                tag: Tag(0xabcd),
+                body: MessageBody::RError(RError {
+                    ename: "it broke".to_string(),
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn message_rstat_write() {
+        let mut data = vec![];
+        Message {
+            tag: Tag(0xabcd),
+            body: MessageBody::RStat(RStat {
+                stat: Stat {
+                    kernel_type: 0,
+                    kernel_dev: 0,
+                    qid: Qid {
+                        file_type: FileType::default(),
+                        version: 0,
+                        path: 0,
+                    },
+                    mode: StatMode::default(),
+                    atime: 0,
+                    mtime: 0,
+                    length: 0,
+                    name: "/".to_string(),
+                    uid: "".to_string(),
+                    gid: "".to_string(),
+                    muid: "".to_string(),
+                },
+            }),
+        }
+        .write_to(&mut data)
+        .unwrap();
+        assert_eq!(
+            data.as_slice(),
+            [
+                125, // message_type
+                0xcd, 0xab, // tag
+                50, 0, // stat outer length
+                48, 0, // stat inner length
+                0x00, 0x00, // kernel_type
+                0x00, 0x00, 0x00, 0x00, // kernel_dev
+                0x00, // qid.file_type
+                0x00, 0x00, 0x00, 0x00, // qid.version
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // qid.path
+                0x00, 0x00, 0x00, 0x00, // mode
+                0x00, 0x00, 0x00, 0x00, // atime
+                0x00, 0x00, 0x00, 0x00, // mtime
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length
+                0x01, 0x00, '/' as u8, // name
+                0x00, 0x00, // uid
+                0x00, 0x00, // gid
+                0x00, 0x00, // muid
+            ],
         );
     }
 }

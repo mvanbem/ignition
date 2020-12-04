@@ -1,6 +1,7 @@
 use bytes::{Buf, BufMut, BytesMut};
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use ignition_9p::message::Message;
+use ignition_9p::wire::{ReadWireFormat, WriteWireFormat};
 use pin_utils::pin_mut;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
@@ -39,7 +40,7 @@ where
     pin_mut!(framed);
     while let Some(frame) = framed.next().await {
         let frame = frame?;
-        let req = Message::read(&mut frame.bytes())?;
+        let req = Message::read_from(&mut frame.bytes())?;
         log::info!("received a request: {:?}", req);
 
         let mut buf = BytesMut::new().writer();
@@ -48,7 +49,7 @@ where
             body: handler::handle_request(&state, &req)?,
         };
         log::info!("response: {:?}", resp);
-        resp.write(&mut buf)?;
+        resp.write_to(&mut buf)?;
         framed.send(buf.into_inner().freeze()).await?;
     }
     log::info!("connection closed");

@@ -1,4 +1,6 @@
+use crate::wire::{ReadWireFormat, WriteWireFormat};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use std::io::{self, Read, Write};
 
 bitfield::bitfield! {
     /// A file type as used in [`Qid::file_type`](crate::Qid::file_type) or the upper bits of
@@ -71,6 +73,16 @@ impl From<u8> for FileType {
 impl From<u32> for FileType {
     fn from(value: u32) -> Self {
         FileType(value as u8)
+    }
+}
+impl ReadWireFormat for FileType {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(FileType(ReadWireFormat::read_from(r)?))
+    }
+}
+impl WriteWireFormat for FileType {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.0.write_to(w)
     }
 }
 

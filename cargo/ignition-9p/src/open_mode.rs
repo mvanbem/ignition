@@ -1,4 +1,6 @@
+use crate::wire::{ReadWireFormat, WriteWireFormat};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use std::io::{self, Read, Write};
 
 bitfield::bitfield! {
     /// A mode for opening and creating files.
@@ -52,6 +54,16 @@ impl From<OpenMode> for u8 {
 impl From<u8> for OpenMode {
     fn from(value: u8) -> Self {
         OpenMode(value)
+    }
+}
+impl ReadWireFormat for OpenMode {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(OpenMode(ReadWireFormat::read_from(r)?))
+    }
+}
+impl WriteWireFormat for OpenMode {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.0.write_to(w)
     }
 }
 

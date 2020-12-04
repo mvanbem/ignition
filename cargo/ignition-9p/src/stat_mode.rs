@@ -1,5 +1,7 @@
+use crate::wire::{ReadWireFormat, WriteWireFormat};
 use crate::{DontTouch, FileType, UnixTriplet};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use std::io::{self, Read, Write};
 
 bitfield::bitfield! {
     /// A combined mode type as used in [`Stat::mode`](crate::Stat::mode).
@@ -62,6 +64,16 @@ impl From<StatMode> for u32 {
 impl From<u32> for StatMode {
     fn from(value: u32) -> Self {
         StatMode(value)
+    }
+}
+impl ReadWireFormat for StatMode {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(StatMode(ReadWireFormat::read_from(r)?))
+    }
+}
+impl WriteWireFormat for StatMode {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.0.write_to(w)
     }
 }
 

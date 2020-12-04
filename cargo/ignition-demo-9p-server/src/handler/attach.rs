@@ -18,7 +18,7 @@ pub fn handle_attach(
     match state
         .lock()
         .unwrap()
-        .allocate_fid(req.fid, static_file_system::ROOT.qid())
+        .allocate_fid(req.fid, &static_file_system::ROOT)
     {
         Ok(()) => (),
         Err(e @ AllocateFidError::FidAlreadyInUse { .. }) => return rerror(e.to_string()),

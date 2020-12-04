@@ -1,5 +1,5 @@
-use crate::ext::{ReadBytesExt, WriteBytesExt};
-use std::io;
+use crate::wire::{ReadWireFormat, WriteWireFormat};
+use std::io::{self, Read, Write};
 
 /// A per-connection message identifier.
 ///
@@ -14,14 +14,6 @@ impl Tag {
     /// A client may use `NOTAG` when establishing a connection to override tag matching in version
     /// messages.
     pub const NOTAG: Tag = Tag(!0);
-
-    pub fn read<R: io::Read>(r: &mut R) -> io::Result<Tag> {
-        Ok(Tag(r.read_u16()?))
-    }
-
-    pub fn write<W: io::Write>(self, w: &mut W) -> io::Result<()> {
-        w.write_u16(self.0)
-    }
 }
 impl std::fmt::Debug for Tag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,5 +22,15 @@ impl std::fmt::Debug for Tag {
         } else {
             write!(f, "{}", self.0)
         }
+    }
+}
+impl ReadWireFormat for Tag {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(Tag(ReadWireFormat::read_from(r)?))
+    }
+}
+impl WriteWireFormat for Tag {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.0.write_to(w)
     }
 }

@@ -1,5 +1,5 @@
-use crate::ext::{ReadBytesExt, WriteBytesExt};
-use std::io;
+use crate::wire::{ReadWireFormat, WriteWireFormat};
+use std::io::{self, Read, Write};
 
 /// A client's file identifier.
 ///
@@ -13,13 +13,6 @@ use std::io;
 pub struct Fid(pub u32);
 impl Fid {
     pub const NOFID: Fid = Fid(!0);
-
-    pub fn read<R: io::Read>(r: &mut R) -> io::Result<Fid> {
-        Ok(Fid(r.read_u32()?))
-    }
-    pub fn write<W: io::Write>(self, w: &mut W) -> io::Result<()> {
-        w.write_u32(self.0)
-    }
 }
 impl std::fmt::Debug for Fid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,5 +21,15 @@ impl std::fmt::Debug for Fid {
         } else {
             write!(f, "{}", self.0)
         }
+    }
+}
+impl ReadWireFormat for Fid {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        Ok(Fid(ReadWireFormat::read_from(r)?))
+    }
+}
+impl WriteWireFormat for Fid {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.0.write_to(w)
     }
 }

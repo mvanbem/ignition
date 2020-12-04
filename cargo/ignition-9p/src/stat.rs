@@ -1,6 +1,7 @@
-use crate::ext::{ReadBytesExt, WriteBytesExt};
+use crate::wire::{ReadWireFormat, SerializedSize, WriteWireFormat};
 use crate::{DontTouch, Qid, StatMode};
-use std::{convert::TryInto, io};
+use std::convert::TryFrom;
+use std::io::{self, Read, Write};
 
 /// A machine-independent directory entry.
 ///
@@ -43,76 +44,8 @@ pub struct Stat {
     pub muid: String,
 }
 impl Stat {
-    pub fn read<R: io::Read>(r: &mut R) -> io::Result<Stat> {
-        let data = r.read_u16_prefixed_bytes()?;
-        let mut r: &[u8] = &data;
-
-        let embedded_size = r.read_u16()?;
-        if embedded_size as usize != r.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "stat size mismatch",
-            ));
-        }
-
-        let kernel_type = r.read_u16()?;
-        let kernel_dev = r.read_u32()?;
-        let qid = Qid::read(&mut r)?;
-        let mode = StatMode(r.read_u32()?);
-        let atime = r.read_u32()?;
-        let mtime = r.read_u32()?;
-        let length = r.read_u64()?;
-        let name = r.read_string()?;
-        let uid = r.read_string()?;
-        let gid = r.read_string()?;
-        let muid = r.read_string()?;
-
-        if r.len() != 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("unexpected data after stat: {} bytes", r.len()),
-            ));
-        }
-
-        Ok(Stat {
-            kernel_type,
-            kernel_dev,
-            qid,
-            mode,
-            atime,
-            mtime,
-            length,
-            name,
-            uid,
-            gid,
-            muid,
-        })
-    }
-
-    pub fn write<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
-        let size = self
-            .size()
-            .try_into()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
-        w.write_u16(size + 2)?;
-        w.write_u16(size)?;
-        w.write_u16(self.kernel_type)?;
-        w.write_u32(self.kernel_dev)?;
-        self.qid.write(w)?;
-        w.write_u32(self.mode.0)?;
-        w.write_u32(self.atime)?;
-        w.write_u32(self.mtime)?;
-        w.write_u64(self.length)?;
-        w.write_string(&self.name)?;
-        w.write_string(&self.uid)?;
-        w.write_string(&self.gid)?;
-        w.write_string(&self.muid)?;
-        Ok(())
-    }
-
-    /// Returns the serialized size of the entry, including all fields and the u16 length prefix.
-    fn size(&self) -> usize {
-        47 + self.name.len() + self.uid.len() + self.gid.len() + self.muid.len()
+    fn embedded_size(&self) -> usize {
+        self.serialized_size() - 2
     }
 }
 impl DontTouch for Stat {
@@ -132,9 +65,66 @@ impl DontTouch for Stat {
         }
     }
 }
+impl ReadWireFormat for Stat {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let mut buf = vec![0; u16::read_from(r)? as usize];
+        r.read_exact(&mut buf)?;
+        let r = &mut buf.as_slice();
+        let kernel_type = ReadWireFormat::read_from(r)?;
+        let kernel_dev = ReadWireFormat::read_from(r)?;
+        let qid = ReadWireFormat::read_from(r)?;
+        let mode = ReadWireFormat::read_from(r)?;
+        let atime = ReadWireFormat::read_from(r)?;
+        let mtime = ReadWireFormat::read_from(r)?;
+        let length = ReadWireFormat::read_from(r)?;
+        let name = ReadWireFormat::read_from(r)?;
+        let uid = ReadWireFormat::read_from(r)?;
+        let gid = ReadWireFormat::read_from(r)?;
+        let muid = ReadWireFormat::read_from(r)?;
+        Ok(Stat {
+            kernel_type,
+            kernel_dev,
+            qid,
+            mode,
+            atime,
+            mtime,
+            length,
+            name,
+            uid,
+            gid,
+            muid,
+        })
+    }
+}
+impl SerializedSize for Stat {
+    fn serialized_size(&self) -> usize {
+        49 + self.name.len() + self.uid.len() + self.gid.len() + self.muid.len()
+    }
+}
+impl WriteWireFormat for Stat {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        u16::try_from(self.embedded_size())
+            .map_err(|_| {
+                io::Error::new(io::ErrorKind::InvalidInput, "Stat too large to serialize")
+            })?
+            .write_to(w)?;
+        self.kernel_type.write_to(w)?;
+        self.kernel_dev.write_to(w)?;
+        self.qid.write_to(w)?;
+        self.mode.write_to(w)?;
+        self.atime.write_to(w)?;
+        self.mtime.write_to(w)?;
+        self.length.write_to(w)?;
+        self.name.write_to(w)?;
+        self.uid.write_to(w)?;
+        self.gid.write_to(w)?;
+        self.muid.write_to(w)
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use crate::wire::{ReadWireFormat, WriteWireFormat};
     use crate::{FileType, Qid, Stat, StatMode, UnixTriplet};
 
     #[test]
@@ -163,9 +153,9 @@ mod tests {
         };
 
         let mut data = vec![];
-        expected.write(&mut data).unwrap();
+        expected.write_to(&mut data).unwrap();
         let mut r: &[u8] = &data;
-        assert_eq!(Stat::read(&mut r).unwrap(), expected);
+        assert_eq!(Stat::read_from(&mut r).unwrap(), expected);
         assert_eq!(r.len(), 0);
     }
 }

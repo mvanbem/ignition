@@ -1,6 +1,6 @@
-use crate::ext::{ReadBytesExt, WriteBytesExt};
+use crate::wire::{ReadWireFormat, WriteWireFormat};
 use crate::{DontTouch, FileType};
-use std::io;
+use std::io::{self, Read, Write};
 
 /// Represents a server's unique identification for a file.
 ///
@@ -21,23 +21,6 @@ pub struct Qid {
     /// path components of the qids should be different.
     pub path: u64,
 }
-impl Qid {
-    pub fn read<R: io::Read>(r: &mut R) -> io::Result<Qid> {
-        let file_type = FileType(r.read_u8()?);
-        let version = r.read_u32()?;
-        let path = r.read_u64()?;
-        Ok(Qid {
-            file_type,
-            version,
-            path,
-        })
-    }
-    pub fn write<W: io::Write>(self, w: &mut W) -> io::Result<()> {
-        w.write_u8(self.file_type.0)?;
-        w.write_u32(self.version)?;
-        w.write_u64(self.path)
-    }
-}
 impl DontTouch for Qid {
     fn dont_touch() -> Self {
         Qid {
@@ -45,5 +28,24 @@ impl DontTouch for Qid {
             version: DontTouch::dont_touch(),
             path: DontTouch::dont_touch(),
         }
+    }
+}
+impl ReadWireFormat for Qid {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
+        let file_type = ReadWireFormat::read_from(r)?;
+        let version = ReadWireFormat::read_from(r)?;
+        let path = ReadWireFormat::read_from(r)?;
+        Ok(Qid {
+            file_type,
+            version,
+            path,
+        })
+    }
+}
+impl WriteWireFormat for Qid {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        self.file_type.write_to(w)?;
+        self.version.write_to(w)?;
+        self.path.write_to(w)
     }
 }
