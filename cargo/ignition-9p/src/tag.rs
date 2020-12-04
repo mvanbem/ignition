@@ -1,5 +1,4 @@
-use crate::wire::{ReadWireFormat, WriteWireFormat};
-use std::io::{self, Read, Write};
+use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 
 /// A per-connection message identifier.
 ///
@@ -8,7 +7,7 @@ use std::io::{self, Read, Write};
 /// the same connection have the same tag. An exception is the tag [`NOTAG`](Tag::NOTAG), defined as
 ///  `!0`: the client can use it when establishing a connection to override tag matching in version
 /// messages.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct Tag(pub u16);
 impl Tag {
     /// A client may use `NOTAG` when establishing a connection to override tag matching in version
@@ -22,15 +21,5 @@ impl std::fmt::Debug for Tag {
         } else {
             write!(f, "{}", self.0)
         }
-    }
-}
-impl ReadWireFormat for Tag {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(Tag(ReadWireFormat::read_from(r)?))
-    }
-}
-impl WriteWireFormat for Tag {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.0.write_to(w)
     }
 }

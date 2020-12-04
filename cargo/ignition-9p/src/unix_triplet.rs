@@ -14,6 +14,8 @@ bitfield::bitfield! {
         Default,
         Eq,
         PartialEq,
+        // TODO: Derive ReadWireFormat, WriteWireFormat. At the moment they seem to conflict with
+        // `bitfield!` and I'm not sure why.
     )]
     pub struct UnixTriplet(u8);
     impl Debug;

@@ -158,14 +158,17 @@ where
 pub trait SerializedSize {
     fn serialized_size(&self) -> usize;
 }
+pub trait EmbeddedSize {
+    fn embedded_size(&self) -> usize;
+}
 
-pub struct OwnedLengthPrefixed<I, T> {
+pub struct OwnedSizePrefixed<I, T> {
     value: T,
     _phantom_i: PhantomData<I>,
 }
-impl<I, T> OwnedLengthPrefixed<I, T> {
+impl<I, T> OwnedSizePrefixed<I, T> {
     pub fn new(value: T) -> Self {
-        OwnedLengthPrefixed {
+        OwnedSizePrefixed {
             value,
             _phantom_i: PhantomData,
         }
@@ -174,7 +177,7 @@ impl<I, T> OwnedLengthPrefixed<I, T> {
         self.value
     }
 }
-impl<I, T> ReadWireFormat for OwnedLengthPrefixed<I, T>
+impl<I, T> ReadWireFormat for OwnedSizePrefixed<I, T>
 where
     u64: TryFrom<I>,
     I: ReadWireFormat,
@@ -196,32 +199,32 @@ where
                 "unread bytes after length-prefixed value",
             ));
         }
-        Ok(OwnedLengthPrefixed::new(value))
+        Ok(OwnedSizePrefixed::new(value))
     }
 }
-impl<I, T> WriteWireFormat for OwnedLengthPrefixed<I, T>
+impl<I, T> WriteWireFormat for OwnedSizePrefixed<I, T>
 where
     I: TryFrom<usize> + WriteWireFormat,
     T: WriteWireFormat + SerializedSize,
 {
     fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        BorrowedLengthPrefixed::<I, T>::new(&self.value).write_to(w)
+        BorrowedSizePrefixed::<I, T>::new(&self.value).write_to(w)
     }
 }
 
-pub struct BorrowedLengthPrefixed<'a, I, T> {
+pub struct BorrowedSizePrefixed<'a, I, T> {
     value: &'a T,
     _phantom_i: PhantomData<I>,
 }
-impl<'a, I, T> BorrowedLengthPrefixed<'a, I, T> {
+impl<'a, I, T> BorrowedSizePrefixed<'a, I, T> {
     pub fn new(value: &'a T) -> Self {
-        BorrowedLengthPrefixed {
+        BorrowedSizePrefixed {
             value,
             _phantom_i: PhantomData,
         }
     }
 }
-impl<'a, I, T> WriteWireFormat for BorrowedLengthPrefixed<'a, I, T>
+impl<'a, I, T> WriteWireFormat for BorrowedSizePrefixed<'a, I, T>
 where
     I: TryFrom<usize> + WriteWireFormat,
     T: WriteWireFormat + SerializedSize,

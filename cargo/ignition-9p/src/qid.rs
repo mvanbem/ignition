@@ -1,13 +1,12 @@
-use crate::wire::{ReadWireFormat, WriteWireFormat};
 use crate::{DontTouch, FileType};
-use std::io::{self, Read, Write};
+use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 
 /// Represents a server's unique identification for a file.
 ///
 /// Two files on the same server hierarchy are the same if and only if their qids are the same. (The
 /// client may have multiple fids pointing to a single file on a server and hence having a single
 /// qid.)
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct Qid {
     /// Specifies whether the file is a directory, append-only file, etc.
     pub file_type: FileType,
@@ -28,24 +27,5 @@ impl DontTouch for Qid {
             version: DontTouch::dont_touch(),
             path: DontTouch::dont_touch(),
         }
-    }
-}
-impl ReadWireFormat for Qid {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let file_type = ReadWireFormat::read_from(r)?;
-        let version = ReadWireFormat::read_from(r)?;
-        let path = ReadWireFormat::read_from(r)?;
-        Ok(Qid {
-            file_type,
-            version,
-            path,
-        })
-    }
-}
-impl WriteWireFormat for Qid {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.file_type.write_to(w)?;
-        self.version.write_to(w)?;
-        self.path.write_to(w)
     }
 }

@@ -1,12 +1,12 @@
-use crate::wire::{ReadWireFormat, SerializedSize, WriteWireFormat};
+use crate::wire::{EmbeddedSize, SerializedSize};
 use crate::{DontTouch, Qid, StatMode};
-use std::convert::TryFrom;
-use std::io::{self, Read, Write};
+use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 
 /// A machine-independent directory entry.
 ///
 /// See also: [stat(5) in the Plan 9 Manual](http://man.cat-v.org/plan_9/5/stat)
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[ignition_9p_wire(embedded_size_prefix = "u16")]
 pub struct Stat {
     /// For kernel use.
     pub kernel_type: u16,
@@ -43,11 +43,6 @@ pub struct Stat {
     /// Name of the user who last modified (changed the mtime of) the file.
     pub muid: String,
 }
-impl Stat {
-    fn embedded_size(&self) -> usize {
-        self.serialized_size() - 2
-    }
-}
 impl DontTouch for Stat {
     fn dont_touch() -> Stat {
         Stat {
@@ -65,60 +60,14 @@ impl DontTouch for Stat {
         }
     }
 }
-impl ReadWireFormat for Stat {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let mut buf = vec![0; u16::read_from(r)? as usize];
-        r.read_exact(&mut buf)?;
-        let r = &mut buf.as_slice();
-        let kernel_type = ReadWireFormat::read_from(r)?;
-        let kernel_dev = ReadWireFormat::read_from(r)?;
-        let qid = ReadWireFormat::read_from(r)?;
-        let mode = ReadWireFormat::read_from(r)?;
-        let atime = ReadWireFormat::read_from(r)?;
-        let mtime = ReadWireFormat::read_from(r)?;
-        let length = ReadWireFormat::read_from(r)?;
-        let name = ReadWireFormat::read_from(r)?;
-        let uid = ReadWireFormat::read_from(r)?;
-        let gid = ReadWireFormat::read_from(r)?;
-        let muid = ReadWireFormat::read_from(r)?;
-        Ok(Stat {
-            kernel_type,
-            kernel_dev,
-            qid,
-            mode,
-            atime,
-            mtime,
-            length,
-            name,
-            uid,
-            gid,
-            muid,
-        })
+impl EmbeddedSize for Stat {
+    fn embedded_size(&self) -> usize {
+        self.serialized_size() - 2
     }
 }
 impl SerializedSize for Stat {
     fn serialized_size(&self) -> usize {
         49 + self.name.len() + self.uid.len() + self.gid.len() + self.muid.len()
-    }
-}
-impl WriteWireFormat for Stat {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        u16::try_from(self.embedded_size())
-            .map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidInput, "Stat too large to serialize")
-            })?
-            .write_to(w)?;
-        self.kernel_type.write_to(w)?;
-        self.kernel_dev.write_to(w)?;
-        self.qid.write_to(w)?;
-        self.mode.write_to(w)?;
-        self.atime.write_to(w)?;
-        self.mtime.write_to(w)?;
-        self.length.write_to(w)?;
-        self.name.write_to(w)?;
-        self.uid.write_to(w)?;
-        self.gid.write_to(w)?;
-        self.muid.write_to(w)
     }
 }
 

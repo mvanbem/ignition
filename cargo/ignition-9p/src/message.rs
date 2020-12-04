@@ -1,17 +1,14 @@
 //! Message types.
 
-use crate::wire::{
-    BorrowedCountPrefixedList, BorrowedLengthPrefixed, OwnedCountPrefixedList, OwnedLengthPrefixed,
-    ReadWireFormat, WriteWireFormat,
-};
+use crate::wire::{ReadWireFormat, WriteWireFormat};
 use crate::{Fid, OpenMode, Qid, Stat, Tag};
+use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 use std::io::{self, Read, Write};
 
 pub mod raw {
-    use crate::wire::{ReadWireFormat, WriteWireFormat};
-    use std::io::{self, Read, Write};
+    use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
     pub struct MessageType(pub u8);
     impl MessageType {
         pub const TVERSION: MessageType = MessageType(100);
@@ -42,16 +39,6 @@ pub mod raw {
         pub const RSTAT: MessageType = MessageType(125);
         pub const TWSTAT: MessageType = MessageType(126);
         pub const RWSTAT: MessageType = MessageType(127);
-    }
-    impl ReadWireFormat for MessageType {
-        fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-            Ok(MessageType(ReadWireFormat::read_from(r)?))
-        }
-    }
-    impl WriteWireFormat for MessageType {
-        fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-            self.0.write_to(w)
-        }
     }
 }
 
@@ -196,394 +183,136 @@ impl MessageBody {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TVersion {
     pub msize: u32,
     pub version: String,
 }
-impl ReadWireFormat for TVersion {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let msize = ReadWireFormat::read_from(r)?;
-        let version = ReadWireFormat::read_from(r)?;
-        Ok(TVersion { msize, version })
-    }
-}
-impl WriteWireFormat for TVersion {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.msize.write_to(w)?;
-        self.version.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RVersion {
     pub msize: u32,
     pub version: String,
 }
-impl ReadWireFormat for RVersion {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let msize = ReadWireFormat::read_from(r)?;
-        let version = ReadWireFormat::read_from(r)?;
-        Ok(RVersion { msize, version })
-    }
-}
-impl WriteWireFormat for RVersion {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.msize.write_to(w)?;
-        self.version.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TAttach {
     pub fid: Fid,
     pub afid: Fid,
     pub uname: String,
     pub aname: String,
 }
-impl ReadWireFormat for TAttach {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let afid = ReadWireFormat::read_from(r)?;
-        let uname = ReadWireFormat::read_from(r)?;
-        let aname = ReadWireFormat::read_from(r)?;
-        Ok(TAttach {
-            fid,
-            afid,
-            uname,
-            aname,
-        })
-    }
-}
-impl WriteWireFormat for TAttach {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.afid.write_to(w)?;
-        self.uname.write_to(w)?;
-        self.aname.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RAttach {
     pub qid: Qid,
 }
-impl ReadWireFormat for RAttach {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RAttach {
-            qid: ReadWireFormat::read_from(r)?,
-        })
-    }
-}
-impl WriteWireFormat for RAttach {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.qid.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RError {
     pub ename: String,
 }
-impl ReadWireFormat for RError {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RError {
-            ename: ReadWireFormat::read_from(r)?,
-        })
-    }
-}
-impl WriteWireFormat for RError {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.ename.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TWalk {
     pub fid: Fid,
     pub newfid: Fid,
+    #[ignition_9p_wire(count_prefixed = "u16")]
     pub names: Vec<String>,
 }
-impl ReadWireFormat for TWalk {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let newfid = ReadWireFormat::read_from(r)?;
-        let names = OwnedCountPrefixedList::<u16, _>::read_from(r)?.into_inner();
-        Ok(TWalk { fid, newfid, names })
-    }
-}
-impl WriteWireFormat for TWalk {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.newfid.write_to(w)?;
-        BorrowedCountPrefixedList::<u16, _>::new(&self.names).write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RWalk {
+    #[ignition_9p_wire(count_prefixed = "u16")]
     pub qids: Vec<Qid>,
 }
-impl ReadWireFormat for RWalk {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RWalk {
-            qids: OwnedCountPrefixedList::<u16, _>::read_from(r)?.into_inner(),
-        })
-    }
-}
-impl WriteWireFormat for RWalk {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        BorrowedCountPrefixedList::<u16, _>::new(&self.qids).write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TOpen {
     pub fid: Fid,
     pub mode: OpenMode,
 }
-impl ReadWireFormat for TOpen {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let mode = ReadWireFormat::read_from(r)?;
-        Ok(TOpen { fid, mode })
-    }
-}
-impl WriteWireFormat for TOpen {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.mode.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct ROpen {
     pub qid: Qid,
     pub iounit: u32,
 }
-impl ReadWireFormat for ROpen {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let qid = ReadWireFormat::read_from(r)?;
-        let iounit = ReadWireFormat::read_from(r)?;
-        Ok(ROpen { qid, iounit })
-    }
-}
-impl WriteWireFormat for ROpen {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.qid.write_to(w)?;
-        self.iounit.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TCreate {
     pub fid: Fid,
     pub name: String,
     pub perm: u32,
     pub mode: OpenMode,
 }
-impl ReadWireFormat for TCreate {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let name = ReadWireFormat::read_from(r)?;
-        let perm = ReadWireFormat::read_from(r)?;
-        let mode = ReadWireFormat::read_from(r)?;
-        Ok(TCreate {
-            fid,
-            name,
-            perm,
-            mode,
-        })
-    }
-}
-impl WriteWireFormat for TCreate {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.name.write_to(w)?;
-        self.perm.write_to(w)?;
-        self.mode.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RCreate {
     pub qid: Qid,
     pub iounit: u32,
 }
-impl ReadWireFormat for RCreate {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let qid = ReadWireFormat::read_from(r)?;
-        let iounit = ReadWireFormat::read_from(r)?;
-        Ok(RCreate { qid, iounit })
-    }
-}
-impl WriteWireFormat for RCreate {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.qid.write_to(w)?;
-        self.iounit.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TRead {
     pub fid: Fid,
     pub offset: u64,
     pub count: u32,
 }
-impl ReadWireFormat for TRead {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let offset = ReadWireFormat::read_from(r)?;
-        let count = ReadWireFormat::read_from(r)?;
-        Ok(TRead { fid, offset, count })
-    }
-}
-impl WriteWireFormat for TRead {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.offset.write_to(w)?;
-        self.count.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RRead {
+    #[ignition_9p_wire(count_prefixed = "u32")]
     pub data: Vec<u8>,
 }
-impl ReadWireFormat for RRead {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RRead {
-            data: OwnedCountPrefixedList::<u32, _>::read_from(r)?.into_inner(),
-        })
-    }
-}
-impl WriteWireFormat for RRead {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        BorrowedCountPrefixedList::<u32, _>::new(&self.data).write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TWrite {
     pub fid: Fid,
     pub offset: u64,
+    #[ignition_9p_wire(count_prefixed = "u32")]
     pub data: Vec<u8>,
 }
-impl ReadWireFormat for TWrite {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let offset = ReadWireFormat::read_from(r)?;
-        let data = OwnedCountPrefixedList::<u32, _>::read_from(r)?.into_inner();
-        Ok(TWrite { fid, offset, data })
-    }
-}
-impl WriteWireFormat for TWrite {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.offset.write_to(w)?;
-        BorrowedCountPrefixedList::<u32, _>::new(&self.data).write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RWrite {
     pub count: u32,
 }
-impl ReadWireFormat for RWrite {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RWrite {
-            count: ReadWireFormat::read_from(r)?,
-        })
-    }
-}
-impl WriteWireFormat for RWrite {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.count.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TClunk {
     pub fid: Fid,
 }
-impl ReadWireFormat for TClunk {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(TClunk {
-            fid: ReadWireFormat::read_from(r)?,
-        })
-    }
-}
-impl WriteWireFormat for TClunk {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TStat {
     pub fid: Fid,
 }
-impl ReadWireFormat for TStat {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(TStat {
-            fid: ReadWireFormat::read_from(r)?,
-        })
-    }
-}
-impl WriteWireFormat for TStat {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct RStat {
+    #[ignition_9p_wire(size_prefixed = "u16")]
     pub stat: Stat,
 }
-impl ReadWireFormat for RStat {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(RStat {
-            stat: OwnedLengthPrefixed::<u16, _>::read_from(r)?.into_inner(),
-        })
-    }
-}
-impl WriteWireFormat for RStat {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        BorrowedLengthPrefixed::<u16, _>::new(&self.stat).write_to(w)
-    }
-}
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
 pub struct TWstat {
     pub fid: Fid,
+    #[ignition_9p_wire(size_prefixed = "u16")]
     pub stat: Stat,
-}
-impl ReadWireFormat for TWstat {
-    fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let fid = ReadWireFormat::read_from(r)?;
-        let stat = ReadWireFormat::read_from(r)?;
-        Ok(TWstat { fid, stat })
-    }
-}
-impl WriteWireFormat for TWstat {
-    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        self.fid.write_to(w)?;
-        self.stat.write_to(w)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Message, MessageBody, RError, RStat, RVersion, TVersion};
+    use super::{Message, MessageBody, RError, RStat, RVersion, TVersion, TWalk};
     use crate::wire::{ReadWireFormat, WriteWireFormat};
-    use crate::{FileType, Qid, Stat, StatMode, Tag};
-    use std::io;
+    use crate::{Fid, FileType, Qid, Stat, StatMode, Tag};
 
     #[test]
     fn message_tversion_read() {
-        let mut data = io::Cursor::new([
+        let mut data: &'static [u8] = &[
             100, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,
-        ]);
+        ];
         assert_eq!(
             Message::read_from(&mut data).unwrap(),
             Message {
@@ -594,6 +323,7 @@ mod tests {
                 }),
             },
         );
+        assert_eq!(data.len(), 0);
     }
 
     #[test]
@@ -619,9 +349,9 @@ mod tests {
 
     #[test]
     fn message_rversion_read() {
-        let mut data = io::Cursor::new([
+        let mut data: &'static [u8] = &[
             101, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,
-        ]);
+        ];
         assert_eq!(
             Message::read_from(&mut data).unwrap(),
             Message {
@@ -632,6 +362,7 @@ mod tests {
                 }),
             },
         );
+        assert_eq!(data.len(), 0);
     }
 
     #[test]
@@ -657,9 +388,9 @@ mod tests {
 
     #[test]
     fn message_rerror_read() {
-        let mut data = io::Cursor::new([
+        let mut data: &'static [u8] = &[
             107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65,
-        ]);
+        ];
         assert_eq!(
             Message::read_from(&mut data).unwrap(),
             Message {
@@ -669,6 +400,7 @@ mod tests {
                 }),
             },
         );
+        assert_eq!(data.len(), 0);
     }
 
     #[test]
@@ -689,19 +421,94 @@ mod tests {
     }
 
     #[test]
-    fn message_rstat_read() {
-        let mut data = io::Cursor::new([
-            107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65,
-        ]);
+    fn message_twalk_read() {
+        let mut data: &'static [u8] = &[
+            110, 0xcd, 0xab, 0x84, 0x83, 0x82, 0x81, 0x94, 0x93, 0x92, 0x91, 0x02, 0x00, 0x03,
+            0x00, 'f' as u8, 'o' as u8, 'o' as u8, 0x03, 0x00, 'b' as u8, 'a' as u8, 'r' as u8,
+        ];
         assert_eq!(
             Message::read_from(&mut data).unwrap(),
             Message {
                 tag: Tag(0xabcd),
-                body: MessageBody::RError(RError {
-                    ename: "it broke".to_string(),
+                body: MessageBody::TWalk(TWalk {
+                    fid: Fid(0x81828384),
+                    newfid: Fid(0x91929394),
+                    names: vec!["foo".to_string(), "bar".to_string()],
                 }),
             },
         );
+        assert_eq!(data.len(), 0);
+    }
+
+    #[test]
+    fn message_twalk_write() {
+        let mut data = vec![];
+        Message {
+            tag: Tag(0xabcd),
+            body: MessageBody::TWalk(TWalk {
+                fid: Fid(0x81828384),
+                newfid: Fid(0x91929394),
+                names: vec!["foo".to_string(), "bar".to_string()],
+            }),
+        }
+        .write_to(&mut data)
+        .unwrap();
+        assert_eq!(
+            data.as_slice(),
+            [
+                110, 0xcd, 0xab, 0x84, 0x83, 0x82, 0x81, 0x94, 0x93, 0x92, 0x91, 0x02, 0x00, 0x03,
+                0x00, 'f' as u8, 'o' as u8, 'o' as u8, 0x03, 0x00, 'b' as u8, 'a' as u8, 'r' as u8
+            ],
+        )
+    }
+
+    #[test]
+    fn message_rstat_read() {
+        let mut data: &'static [u8] = &[
+            125, // message_type
+            0xcd, 0xab, // tag
+            50, 0, // stat outer length
+            48, 0, // stat inner length
+            0x00, 0x00, // kernel_type
+            0x00, 0x00, 0x00, 0x00, // kernel_dev
+            0x00, // qid.file_type
+            0x00, 0x00, 0x00, 0x00, // qid.version
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // qid.path
+            0x00, 0x00, 0x00, 0x00, // mode
+            0x00, 0x00, 0x00, 0x00, // atime
+            0x00, 0x00, 0x00, 0x00, // mtime
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length
+            0x01, 0x00, '/' as u8, // name
+            0x00, 0x00, // uid
+            0x00, 0x00, // gid
+            0x00, 0x00, // muid
+        ];
+        assert_eq!(
+            Message::read_from(&mut data).unwrap(),
+            Message {
+                tag: Tag(0xabcd),
+                body: MessageBody::RStat(RStat {
+                    stat: Stat {
+                        kernel_type: 0,
+                        kernel_dev: 0,
+                        qid: Qid {
+                            file_type: FileType::default(),
+                            version: 0,
+                            path: 0,
+                        },
+                        mode: StatMode::default(),
+                        atime: 0,
+                        mtime: 0,
+                        length: 0,
+                        name: "/".to_string(),
+                        uid: "".to_string(),
+                        gid: "".to_string(),
+                        muid: "".to_string(),
+                    },
+                }),
+            },
+        );
+        assert_eq!(data.len(), 0);
     }
 
     #[test]
