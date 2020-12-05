@@ -1,5 +1,5 @@
-use crate::wire::{ReadWireFormat, WriteWireFormat};
-use crate::{DontTouch, FileType, UnixTriplet};
+use crate::wire::{DontTouch, ReadFrom, WriteTo};
+use crate::{FileType, UnixTriplet};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::io::{self, Read, Write};
 
@@ -68,12 +68,12 @@ impl From<u32> for StatMode {
         StatMode(value)
     }
 }
-impl ReadWireFormat for StatMode {
+impl ReadFrom for StatMode {
     fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(StatMode(ReadWireFormat::read_from(r)?))
+        Ok(StatMode(ReadFrom::read_from(r)?))
     }
 }
-impl WriteWireFormat for StatMode {
+impl WriteTo for StatMode {
     fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         self.0.write_to(w)
     }

@@ -1,4 +1,4 @@
-use crate::wire::{ReadWireFormat, WriteWireFormat};
+use crate::wire::{ReadFrom, WriteTo};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::io::{self, Read, Write};
 
@@ -77,12 +77,12 @@ impl From<u32> for FileType {
         FileType(value as u8)
     }
 }
-impl ReadWireFormat for FileType {
+impl ReadFrom for FileType {
     fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(FileType(ReadWireFormat::read_from(r)?))
+        Ok(FileType(ReadFrom::read_from(r)?))
     }
 }
-impl WriteWireFormat for FileType {
+impl WriteTo for FileType {
     fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         self.0.write_to(w)
     }

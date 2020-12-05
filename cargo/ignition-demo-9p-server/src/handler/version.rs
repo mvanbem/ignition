@@ -18,7 +18,7 @@ pub fn handle_version(
     }
     let msize = std::cmp::min(req.msize, crate::MAX_MSIZE);
     if req.version != SUPPORTED_VERSION {
-        // 9P2000 is the only supported protocol version.
+        // 9p2000 is the only supported protocol version.
         log::warn!(
             "peer requested unsupported protocol version {:?}",
             req.version

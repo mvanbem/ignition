@@ -1,11 +1,11 @@
-use crate::wire::{EmbeddedSize, SerializedSize};
-use crate::{DontTouch, Qid, StatMode};
-use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+use crate::wire::{DontTouch, EmbeddedSize, SerializedSize};
+use crate::{Qid, StatMode};
+use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
 /// A machine-independent directory entry.
 ///
 /// See also: [stat(5) in the Plan 9 Manual](http://man.cat-v.org/plan_9/5/stat)
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 #[ignition_9p_wire(embedded_size_prefix = "u16")]
 pub struct Stat {
     /// For kernel use.
@@ -73,7 +73,7 @@ impl SerializedSize for Stat {
 
 #[cfg(test)]
 mod tests {
-    use crate::wire::{ReadWireFormat, WriteWireFormat};
+    use crate::wire::{ReadFrom, WriteTo};
     use crate::{FileType, Qid, Stat, StatMode, UnixTriplet};
 
     #[test]

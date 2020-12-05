@@ -1,7 +1,7 @@
 use bytes::{Buf, BufMut, BytesMut};
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use ignition_9p::message::Message;
-use ignition_9p::wire::{ReadWireFormat, WriteWireFormat};
+use ignition_9p::wire::{ReadFrom, WriteTo};
 use pin_utils::pin_mut;
 use std::error::Error;
 use std::sync::{Arc, Mutex};

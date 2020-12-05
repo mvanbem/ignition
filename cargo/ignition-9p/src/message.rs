@@ -1,14 +1,14 @@
 //! Message types.
 
-use crate::wire::{ReadWireFormat, WriteWireFormat};
+use crate::wire::{ReadFrom, WriteTo};
 use crate::{Fid, OpenMode, Qid, Stat, Tag};
-use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 use std::io::{self, Read, Write};
 
 pub mod raw {
-    use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+    use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
     pub struct MessageType(pub u8);
     impl MessageType {
         pub const TVERSION: MessageType = MessageType(100);
@@ -47,34 +47,34 @@ pub struct Message {
     pub tag: Tag,
     pub body: MessageBody,
 }
-impl ReadWireFormat for Message {
+impl ReadFrom for Message {
     fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        let message_type = ReadWireFormat::read_from(r)?;
-        let tag = ReadWireFormat::read_from(r)?;
+        let message_type = ReadFrom::read_from(r)?;
+        let tag = ReadFrom::read_from(r)?;
 
         Ok(Message {
             tag,
             body: match message_type {
-                raw::MessageType::TVERSION => MessageBody::TVersion(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RVERSION => MessageBody::RVersion(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TATTACH => MessageBody::TAttach(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RATTACH => MessageBody::RAttach(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RERROR => MessageBody::RError(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TWALK => MessageBody::TWalk(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RWALK => MessageBody::RWalk(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TOPEN => MessageBody::TOpen(ReadWireFormat::read_from(r)?),
-                raw::MessageType::ROPEN => MessageBody::ROpen(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TCREATE => MessageBody::TCreate(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RCREATE => MessageBody::RCreate(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TREAD => MessageBody::TRead(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RREAD => MessageBody::RRead(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TWRITE => MessageBody::TWrite(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RWRITE => MessageBody::RWrite(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TCLUNK => MessageBody::TClunk(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TVERSION => MessageBody::TVersion(ReadFrom::read_from(r)?),
+                raw::MessageType::RVERSION => MessageBody::RVersion(ReadFrom::read_from(r)?),
+                raw::MessageType::TATTACH => MessageBody::TAttach(ReadFrom::read_from(r)?),
+                raw::MessageType::RATTACH => MessageBody::RAttach(ReadFrom::read_from(r)?),
+                raw::MessageType::RERROR => MessageBody::RError(ReadFrom::read_from(r)?),
+                raw::MessageType::TWALK => MessageBody::TWalk(ReadFrom::read_from(r)?),
+                raw::MessageType::RWALK => MessageBody::RWalk(ReadFrom::read_from(r)?),
+                raw::MessageType::TOPEN => MessageBody::TOpen(ReadFrom::read_from(r)?),
+                raw::MessageType::ROPEN => MessageBody::ROpen(ReadFrom::read_from(r)?),
+                raw::MessageType::TCREATE => MessageBody::TCreate(ReadFrom::read_from(r)?),
+                raw::MessageType::RCREATE => MessageBody::RCreate(ReadFrom::read_from(r)?),
+                raw::MessageType::TREAD => MessageBody::TRead(ReadFrom::read_from(r)?),
+                raw::MessageType::RREAD => MessageBody::RRead(ReadFrom::read_from(r)?),
+                raw::MessageType::TWRITE => MessageBody::TWrite(ReadFrom::read_from(r)?),
+                raw::MessageType::RWRITE => MessageBody::RWrite(ReadFrom::read_from(r)?),
+                raw::MessageType::TCLUNK => MessageBody::TClunk(ReadFrom::read_from(r)?),
                 raw::MessageType::RCLUNK => MessageBody::RClunk,
-                raw::MessageType::TSTAT => MessageBody::TStat(ReadWireFormat::read_from(r)?),
-                raw::MessageType::RSTAT => MessageBody::RStat(ReadWireFormat::read_from(r)?),
-                raw::MessageType::TWSTAT => MessageBody::TWstat(ReadWireFormat::read_from(r)?),
+                raw::MessageType::TSTAT => MessageBody::TStat(ReadFrom::read_from(r)?),
+                raw::MessageType::RSTAT => MessageBody::RStat(ReadFrom::read_from(r)?),
+                raw::MessageType::TWSTAT => MessageBody::TWstat(ReadFrom::read_from(r)?),
                 raw::MessageType::RWSTAT => MessageBody::RWstat,
                 _ => {
                     return Err(io::Error::new(
@@ -86,7 +86,7 @@ impl ReadWireFormat for Message {
         })
     }
 }
-impl WriteWireFormat for Message {
+impl WriteTo for Message {
     fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         self.body.message_type().write_to(w)?;
         self.tag.write_to(w)?;
@@ -183,19 +183,19 @@ impl MessageBody {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TVersion {
     pub msize: u32,
     pub version: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RVersion {
     pub msize: u32,
     pub version: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TAttach {
     pub fid: Fid,
     pub afid: Fid,
@@ -203,17 +203,17 @@ pub struct TAttach {
     pub aname: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RAttach {
     pub qid: Qid,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RError {
     pub ename: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TWalk {
     pub fid: Fid,
     pub newfid: Fid,
@@ -221,25 +221,25 @@ pub struct TWalk {
     pub names: Vec<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RWalk {
     #[ignition_9p_wire(count_prefixed = "u16")]
     pub qids: Vec<Qid>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TOpen {
     pub fid: Fid,
     pub mode: OpenMode,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct ROpen {
     pub qid: Qid,
     pub iounit: u32,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TCreate {
     pub fid: Fid,
     pub name: String,
@@ -247,55 +247,55 @@ pub struct TCreate {
     pub mode: OpenMode,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RCreate {
     pub qid: Qid,
     pub iounit: u32,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TRead {
     pub fid: Fid,
     pub offset: u64,
     pub count: u32,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RRead {
-    #[ignition_9p_wire(count_prefixed = "u32")]
+    #[ignition_9p_wire(length_prefixed_bytes = "u32")]
     pub data: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TWrite {
     pub fid: Fid,
     pub offset: u64,
-    #[ignition_9p_wire(count_prefixed = "u32")]
+    #[ignition_9p_wire(length_prefixed_bytes = "u32")]
     pub data: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RWrite {
     pub count: u32,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TClunk {
     pub fid: Fid,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TStat {
     pub fid: Fid,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct RStat {
     #[ignition_9p_wire(size_prefixed = "u16")]
     pub stat: Stat,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct TWstat {
     pub fid: Fid,
     #[ignition_9p_wire(size_prefixed = "u16")]
@@ -305,7 +305,7 @@ pub struct TWstat {
 #[cfg(test)]
 mod tests {
     use super::{Message, MessageBody, RError, RStat, RVersion, TVersion, TWalk};
-    use crate::wire::{ReadWireFormat, WriteWireFormat};
+    use crate::wire::{ReadFrom, WriteTo};
     use crate::{Fid, FileType, Qid, Stat, StatMode, Tag};
 
     #[test]

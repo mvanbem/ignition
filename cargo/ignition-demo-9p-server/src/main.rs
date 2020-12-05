@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let matches = clap::App::new("ignition-demo-9p-server")
         .author("Michael VanBemmel <michael.vanbemmel@gmail.com>")
-        .about("Demo 9P2000 file server for hard-coded static contents")
+        .about("Demo 9p2000 file server with hard-coded static data")
         .arg(
             clap::Arg::with_name("addr")
                 .short("a")

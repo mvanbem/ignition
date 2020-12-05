@@ -1,9 +1,9 @@
-use crate::wire::{ReadWireFormat, WriteWireFormat};
+use crate::wire::{ReadFrom, WriteTo};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::io::{self, Read, Write};
 
 bitfield::bitfield! {
-    /// A mode for opening and creating files.
+    /// A combined mode for opening and creating files.
     #[derive(
         BitAnd,
         BitAndAssign,
@@ -58,18 +58,18 @@ impl From<u8> for OpenMode {
         OpenMode(value)
     }
 }
-impl ReadWireFormat for OpenMode {
+impl ReadFrom for OpenMode {
     fn read_from<R: Read>(r: &mut R) -> io::Result<Self> {
-        Ok(OpenMode(ReadWireFormat::read_from(r)?))
+        Ok(OpenMode(ReadFrom::read_from(r)?))
     }
 }
-impl WriteWireFormat for OpenMode {
+impl WriteTo for OpenMode {
     fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         self.0.write_to(w)
     }
 }
 
-/// An access mode for opening and creating files.
+/// An access specifier for opening and creating files.
 ///
 /// The value is stored in the least significant two bits of a [`u8`]. The other six bits are
 /// ignored in the implementations of [`Debug`] and [`PartialEq`].

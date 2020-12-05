@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "ignition-9p",
+    "ignition-9p-wire",
     "ignition-9p-wire-derive",
     "ignition-blob",
     "ignition-demo-9p-server",

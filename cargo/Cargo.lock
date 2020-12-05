@@ -521,6 +521,15 @@ dependencies = [
  "bitfield",
  "byteorder",
  "derive_more",
+ "ignition-9p-wire",
+ "ignition-9p-wire-derive",
+]
+
+[[package]]
+name = "ignition-9p-wire"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
  "ignition-9p-wire-derive",
 ]
 

@@ -1,4 +1,4 @@
-use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
 /// A per-connection message identifier.
 ///
@@ -7,7 +7,7 @@ use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 /// the same connection have the same tag. An exception is the tag [`NOTAG`](Tag::NOTAG), defined as
 ///  `!0`: the client can use it when establishing a connection to override tag matching in version
 /// messages.
-#[derive(Clone, Copy, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Copy, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct Tag(pub u16);
 impl Tag {
     /// A client may use `NOTAG` when establishing a connection to override tag matching in version

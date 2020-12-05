@@ -1,15 +1,15 @@
-//! An implementation of the `9P2000` wire protocol.
+//! Serializable structures for the Plan 9 Remote Resource Protocol, version 9p2000.
 //!
-//! Serialization and deserialization are supported through the
-//! [`WriteWireFormat`](wire::WriteWireFormat) and [`ReadWireFormat`](wire::ReadWireFormat) traits
-//! in the [`wire`] module.
+//! Serialization and deserialization are supported through the [`WriteTo`](wire::WriteTo) and
+//! [`ReadFrom`](wire::ReadFrom) traits from the [`ignition-9p-wire`](ignition_9p_wire) crate,
+//! re-exported here as the [`wire`] module.
 //!
 //! # Example
 //!
 //! ```
 //! use ignition_9p::Tag;
 //! use ignition_9p::message::{Message, MessageBody, TVersion};
-//! use ignition_9p::wire::ReadWireFormat;
+//! use ignition_9p::wire::ReadFrom;
 //!
 //! let mut data: &'static [u8] = &[
 //!     100, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,
@@ -34,7 +34,6 @@
 //!
 //! [http://man.cat-v.org/plan_9/5/](http://man.cat-v.org/plan_9/5/)
 
-mod dont_touch;
 mod fid;
 mod file_type;
 pub mod message;
@@ -44,10 +43,8 @@ mod stat;
 mod stat_mode;
 mod tag;
 mod unix_triplet;
-pub mod wire;
 
 pub use crate::{
-    dont_touch::DontTouch,
     fid::Fid,
     file_type::FileType,
     open_mode::{OpenAccess, OpenMode},
@@ -57,3 +54,4 @@ pub use crate::{
     tag::Tag,
     unix_triplet::UnixTriplet,
 };
+pub use ignition_9p_wire as wire;

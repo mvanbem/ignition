@@ -1,12 +1,13 @@
-use crate::{DontTouch, FileType};
-use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+use crate::wire::DontTouch;
+use crate::FileType;
+use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
 /// Represents a server's unique identification for a file.
 ///
 /// Two files on the same server hierarchy are the same if and only if their qids are the same. (The
 /// client may have multiple fids pointing to a single file on a server and hence having a single
 /// qid.)
-#[derive(Clone, Copy, Debug, Eq, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
 pub struct Qid {
     /// Specifies whether the file is a directory, append-only file, etc.
     pub file_type: FileType,

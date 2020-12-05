@@ -1,3 +1,8 @@
+//! This crate provides derive macros for use with the `ignition-9p-wire` crate.
+//!
+//! See the `ReadFrom` and `WriteTo` traits in the `ignition-9p-wire` crate for full usage
+//! instructions and examples.
+
 use std::error::Error;
 use std::unimplemented;
 
@@ -11,8 +16,8 @@ use syn::{
     GenericParam, Generics, Index, LitStr, Path, Token,
 };
 
-#[proc_macro_derive(ReadWireFormat, attributes(ignition_9p_wire))]
-pub fn derive_read_wire_format(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(ReadFrom, attributes(ignition_9p_wire))]
+pub fn derive_read(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
@@ -25,7 +30,7 @@ pub fn derive_read_wire_format(input: proc_macro::TokenStream) -> proc_macro::To
 
     let expanded = quote! {
         #(#struct_attr_errors)*
-        impl #impl_generics crate::wire::ReadWireFormat for #name #ty_generics #where_clause {
+        impl #impl_generics ::ignition_9p_wire::ReadFrom for #name #ty_generics #where_clause {
             fn read_from<R: ::std::io::Read>(r: &mut R) -> ::std::io::Result<Self> {
                 #read_body
             }
@@ -35,8 +40,8 @@ pub fn derive_read_wire_format(input: proc_macro::TokenStream) -> proc_macro::To
     expanded.into()
 }
 
-#[proc_macro_derive(WriteWireFormat, attributes(ignition_9p_wire))]
-pub fn derive_write_wire_format(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(WriteTo, attributes(ignition_9p_wire))]
+pub fn derive_write(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
@@ -49,7 +54,7 @@ pub fn derive_write_wire_format(input: proc_macro::TokenStream) -> proc_macro::T
 
     let expanded = quote! {
         #(#struct_attr_errors)*
-        impl #impl_generics crate::wire::WriteWireFormat for #name #ty_generics #where_clause {
+        impl #impl_generics ::ignition_9p_wire::WriteTo for #name #ty_generics #where_clause {
             fn write_to<W: ::std::io::Write>(&self, w: &mut W) -> ::std::io::Result<()> {
                 #write_body
             }
@@ -64,7 +69,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(crate::wire::ReadWireFormat))
+                .push(parse_quote!(::ignition_9p_wire::ReadFrom))
         }
     }
     generics
@@ -127,6 +132,7 @@ enum Prefixed {
     None,
     Count { ty: Path },
     Size { ty: Path },
+    LengthBytes { ty: Path },
 }
 
 fn parse_field_attrs(attrs: &[Attribute]) -> FieldAttrs {
@@ -158,6 +164,16 @@ fn parse_field_attrs(attrs: &[Attribute]) -> FieldAttrs {
                         }
                     };
                     prefixed.push(Prefixed::Size { ty });
+                }
+                x if x == "length_prefixed_bytes" => {
+                    let ty: Path = match key_value.value.parse() {
+                        Ok(ty) => ty,
+                        Err(e) => {
+                            errors.push(AttrError::Other(e.into()));
+                            continue;
+                        }
+                    };
+                    prefixed.push(Prefixed::LengthBytes { ty });
                 }
                 _ => errors.push(AttrError::UnexpectedKey {
                     key: key_value.key.clone(),
@@ -260,7 +276,7 @@ fn make_read_body(struct_attrs: &StructAttrs, struct_name: &Ident, data: &Data) 
     let embedded_length_decl = struct_attrs.embedded_size_prefix.as_ref().map(|ty| {
         quote! {
             let len = <u64 as ::std::convert::TryFrom<_>>::try_from(
-                <#ty as crate::wire::ReadWireFormat>::read_from(r)?,
+                <#ty as ::ignition_9p_wire::ReadFrom>::read_from(r)?,
             ).map_err(|_| ::std::io::Error::new(
                 ::std::io::ErrorKind::InvalidInput,
                 "value too large to represent in memory",
@@ -289,14 +305,17 @@ fn make_read_body(struct_attrs: &StructAttrs, struct_name: &Ident, data: &Data) 
                     let errors = &attrs.errors;
                     match attrs.prefixed {
                         Prefixed::None => quote_spanned! {f.span()=>
-                            let #name = crate::wire::ReadWireFormat::read_from(r)?;
+                            let #name = ::ignition_9p_wire::ReadFrom::read_from(r)?;
                             #(#errors)*
                         },
                         Prefixed::Count { ref ty } => quote_spanned! {f.span()=>
-                            let #name = <crate::wire::OwnedCountPrefixedList::<#ty, _> as crate::wire::ReadWireFormat>::read_from(r)?.into_inner();
+                            let #name = <::ignition_9p_wire::OwnedCountPrefixedList::<#ty, _> as ::ignition_9p_wire::ReadFrom>::read_from(r)?.into_inner();
                         },
                         Prefixed::Size { ref ty } => quote_spanned! {f.span()=>
-                            let #name = crate::wire::OwnedSizePrefixed::<#ty, _>::read_from(r)?.into_inner();
+                            let #name = ::ignition_9p_wire::OwnedSizePrefixed::<#ty, _>::read_from(r)?.into_inner();
+                        },
+                        Prefixed::LengthBytes { ref ty } => quote_spanned! {f.span()=>
+                            let #name = ::ignition_9p_wire::OwnedLengthPrefixedBytes::<#ty>::read_from(r)?.into_inner();
                         },
                     }
                 }).collect::<Vec<_>>();
@@ -317,7 +336,7 @@ fn make_read_body(struct_attrs: &StructAttrs, struct_name: &Ident, data: &Data) 
                     .map(|(i, f)| {
                         let temporary_name = format_ident!("f{}", i);
                         quote_spanned! {f.span()=>
-                            let #temporary_name = crate::wire::ReadWireFormat::read_from(r)?;
+                            let #temporary_name = ::ignition_9p_wire::ReadFrom::read_from(r)?;
                         }
                     })
                     .collect();
@@ -346,16 +365,27 @@ fn make_read_body(struct_attrs: &StructAttrs, struct_name: &Ident, data: &Data) 
 fn make_write_body(struct_attrs: &StructAttrs, data: &Data) -> TokenStream {
     let write_embedded_length = struct_attrs.embedded_size_prefix.as_ref().map(|ty| {
         quote! {
-            crate::wire::WriteWireFormat::write_to(
-                &<#ty as ::std::convert::TryFrom<_>>::try_from(
-                    crate::wire::EmbeddedSize::embedded_size(self),
-                )
+            let size = ::ignition_9p_wire::EmbeddedSize::embedded_size(self);
+            ::ignition_9p_wire::WriteTo::write_to(
+                &<#ty as ::std::convert::TryFrom<_>>::try_from(size)
                 .map_err(|_| ::std::io::Error::new(
                     ::std::io::ErrorKind::InvalidInput,
                     "value too large to serailize",
                 ))?,
                 w,
             )?;
+            let w = &mut ::ignition_9p_wire::LimitedWriter::new(w, size as u64);
+        }
+    });
+    let check_embedded_length = struct_attrs.embedded_size_prefix.as_ref().map(|_| {
+        quote! {
+            if w.limit() != 0 {
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::InvalidData,
+                    // TODO: Break this out into a proper Error type and surface the specific numbers.
+                    "unwritten bytes after size-prefixed value",
+                ));
+            }
         }
     });
 
@@ -368,13 +398,16 @@ fn make_write_body(struct_attrs: &StructAttrs, data: &Data) -> TokenStream {
                     let errors = &attrs.errors;
                     let statement = match attrs.prefixed {
                         Prefixed::None => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&self.#name, w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&self.#name, w)?;
                         },
                         Prefixed::Count { ref ty } => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&crate::wire::BorrowedCountPrefixedList::<#ty, _>::new(&self.#name), w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedCountPrefixedList::<#ty, _>::new(&self.#name), w)?;
                         },
                         Prefixed::Size { ref ty } => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&crate::wire::BorrowedSizePrefixed::<#ty, _>::new(&self.#name), w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedSizePrefixed::<#ty, _>::new(&self.#name), w)?;
+                        },
+                        Prefixed::LengthBytes { ref ty } => quote_spanned! {f.span()=>
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedLengthPrefixedBytes::<#ty>::new(&self.#name), w)?;
                         },
                     };
                     quote_spanned! {f.span()=>
@@ -390,13 +423,16 @@ fn make_write_body(struct_attrs: &StructAttrs, data: &Data) -> TokenStream {
                     let errors = &attrs.errors;
                     let statement = match attrs.prefixed {
                         Prefixed::None => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&self.#index, w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&self.#index, w)?;
                         },
                         Prefixed::Count { ref ty } => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&crate::wire::BorrowedCountPrefixedList::<#ty, _>::new(&self.#index), w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedCountPrefixedList::<#ty, _>::new(&self.#index), w)?;
                         },
                         Prefixed::Size { ref ty } => quote_spanned! {f.span()=>
-                            crate::wire::WriteWireFormat::write_to(&crate::wire::BorrowedSizePrefixed::<#ty, _>::new(&self.#index), w)?;
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedSizePrefixed::<#ty, _>::new(&self.#index), w)?;
+                        },
+                        Prefixed::LengthBytes { ref ty } => quote_spanned! {f.span()=>
+                            ::ignition_9p_wire::WriteTo::write_to(&::ignition_9p_wire::BorrowedLengthPrefixedBytes::<#ty>::new(&self.#index), w)?;
                         },
                     };
                     quote_spanned! {f.span()=>
@@ -413,6 +449,7 @@ fn make_write_body(struct_attrs: &StructAttrs, data: &Data) -> TokenStream {
     quote! {
         #write_embedded_length
         #(#write_fields)*
+        #check_embedded_length
         Ok(())
     }
 }

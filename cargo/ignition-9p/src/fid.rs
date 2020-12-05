@@ -1,4 +1,4 @@
-use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
+use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
 /// A client's file identifier.
 ///
@@ -8,7 +8,7 @@ use ignition_9p_wire_derive::{ReadWireFormat, WriteWireFormat};
 /// identified by fids. Fids are chosen by the client. All requests on a connection share the same
 /// fid space; when several clients share a connection, the agent managing the sharing must arrange
 /// that no two clients choose the same fid.
-#[derive(Clone, Copy, Eq, Hash, PartialEq, ReadWireFormat, WriteWireFormat)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, ReadFrom, WriteTo)]
 pub struct Fid(pub u32);
 impl Fid {
     pub const NOFID: Fid = Fid(!0);
