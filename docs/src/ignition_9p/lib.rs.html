@@ -46,21 +46,47 @@
 <span id="43">43</span>
 <span id="44">44</span>
 <span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! An implementation of the `9P2000` wire protocol.</span>
+<span class="doccomment">//! Serializable structures for the Plan 9 Remote Resource Protocol, version 9p2000.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Complex types can serialize and deserialize themselves in the 9P2000 wire format with methods of</span>
-<span class="doccomment">//! this form:</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//! # use std::io::{self, Read, Write};</span>
-<span class="doccomment">//! # trait Example {</span>
-<span class="doccomment">//! fn write&lt;W: Write&gt;(&amp;self, &amp;mut W) -&gt; io::Result&lt;()&gt;;</span>
-<span class="doccomment">//! fn read&lt;R: Read&gt;(&amp;mut R) -&gt; io::Result&lt;Self&gt;;</span>
-<span class="doccomment">//! # }</span>
-<span class="doccomment">//! ```</span>
+<span class="doccomment">//! Serialization and deserialization are supported through the [`WriteTo`](wire::WriteTo) and</span>
+<span class="doccomment">//! [`ReadFrom`](wire::ReadFrom) traits from the [`ignition-9p-wire`](ignition_9p_wire) crate,</span>
+<span class="doccomment">//! re-exported here as the [`wire`] module.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Extension traits for serializing and deserializing basic types are available in the [ext]</span>
-<span class="doccomment">//! module.</span>
+<span class="doccomment">//! # Example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! use ignition_9p::Tag;</span>
+<span class="doccomment">//! use ignition_9p::message::{Message, MessageBody, TVersion};</span>
+<span class="doccomment">//! use ignition_9p::wire::ReadFrom;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let mut data: &amp;&#39;static [u8] = &amp;[</span>
+<span class="doccomment">//!     100, 0xcd, 0xab, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30,</span>
+<span class="doccomment">//! ];</span>
+<span class="doccomment">//! let msg = Message::read_from(&amp;mut data).unwrap();</span>
+<span class="doccomment">//! assert_eq!(</span>
+<span class="doccomment">//!     msg,</span>
+<span class="doccomment">//!     Message {</span>
+<span class="doccomment">//!         tag: Tag(0xabcd),</span>
+<span class="doccomment">//!         body: MessageBody::TVersion(TVersion {</span>
+<span class="doccomment">//!             msize: 0x12345678,</span>
+<span class="doccomment">//!             version: &quot;9P2000&quot;.to_string(),</span>
+<span class="doccomment">//!         }),</span>
+<span class="doccomment">//!     },</span>
+<span class="doccomment">//! );</span>
+<span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Acknowledgement</span>
 <span class="doccomment">//!</span>
@@ -69,8 +95,6 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [http://man.cat-v.org/plan_9/5/](http://man.cat-v.org/plan_9/5/)</span>
 
-<span class="kw">mod</span> <span class="ident">dont_touch</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">ext</span>;
 <span class="kw">mod</span> <span class="ident">fid</span>;
 <span class="kw">mod</span> <span class="ident">file_type</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">message</span>;
@@ -82,7 +106,6 @@
 <span class="kw">mod</span> <span class="ident">unix_triplet</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">dont_touch</span>::<span class="ident">DontTouch</span>,
     <span class="ident">fid</span>::<span class="ident">Fid</span>,
     <span class="ident">file_type</span>::<span class="ident">FileType</span>,
     <span class="ident">open_mode</span>::{<span class="ident">OpenAccess</span>, <span class="ident">OpenMode</span>},
@@ -92,5 +115,6 @@
     <span class="ident">tag</span>::<span class="ident">Tag</span>,
     <span class="ident">unix_triplet</span>::<span class="ident">UnixTriplet</span>,
 };
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">ignition_9p_wire</span> <span class="kw">as</span> <span class="ident">wire</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "ignition_9p";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

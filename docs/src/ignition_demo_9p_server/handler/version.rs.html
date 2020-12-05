@@ -60,7 +60,7 @@
     }
     <span class="kw">let</span> <span class="ident">msize</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">min</span>(<span class="ident">req</span>.<span class="ident">msize</span>, <span class="kw">crate</span>::<span class="ident">MAX_MSIZE</span>);
     <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">version</span> <span class="op">!</span><span class="op">=</span> <span class="ident">SUPPORTED_VERSION</span> {
-        <span class="comment">// 9P2000 is the only supported protocol version.</span>
+        <span class="comment">// 9p2000 is the only supported protocol version.</span>
         <span class="ident">log</span>::<span class="macro">warn</span><span class="macro">!</span>(
             <span class="string">&quot;peer requested unsupported protocol version {:?}&quot;</span>,
             <span class="ident">req</span>.<span class="ident">version</span>

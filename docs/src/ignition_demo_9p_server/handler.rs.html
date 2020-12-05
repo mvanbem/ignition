@@ -30,6 +30,12 @@
 <span id="27">27</span>
 <span id="28">28</span>
 <span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">ignition_9p</span>::<span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">MessageBody</span>, <span class="ident">RError</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
@@ -38,9 +44,13 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">connection_state</span>::<span class="ident">ConnectionState</span>;
 
 <span class="kw">mod</span> <span class="ident">attach</span>;
+<span class="kw">mod</span> <span class="ident">clunk</span>;
+<span class="kw">mod</span> <span class="ident">stat</span>;
 <span class="kw">mod</span> <span class="ident">version</span>;
 
 <span class="kw">use</span> <span class="ident">attach</span>::<span class="ident">handle_attach</span>;
+<span class="kw">use</span> <span class="ident">clunk</span>::<span class="ident">handle_clunk</span>;
+<span class="kw">use</span> <span class="ident">stat</span>::<span class="ident">handle_stat</span>;
 <span class="kw">use</span> <span class="ident">version</span>::<span class="ident">handle_version</span>;
 
 <span class="kw">fn</span> <span class="ident">rerror</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">msg</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MessageBody</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">dyn</span> <span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -54,6 +64,8 @@
     <span class="kw">match</span> <span class="ident">req</span>.<span class="ident">body</span> {
         <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="kw-2">ref</span> <span class="ident">tversion</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_version</span>(<span class="ident">state</span>, <span class="ident">req</span>.<span class="ident">tag</span>, <span class="ident">tversion</span>),
         <span class="ident">MessageBody</span>::<span class="ident">TAttach</span>(<span class="kw-2">ref</span> <span class="ident">tattach</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_attach</span>(<span class="ident">state</span>, <span class="ident">tattach</span>),
+        <span class="ident">MessageBody</span>::<span class="ident">TStat</span>(<span class="kw-2">ref</span> <span class="ident">tstat</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_stat</span>(<span class="ident">state</span>, <span class="ident">tstat</span>),
+        <span class="ident">MessageBody</span>::<span class="ident">TClunk</span>(<span class="kw-2">ref</span> <span class="ident">tclunk</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_clunk</span>(<span class="ident">state</span>, <span class="ident">tclunk</span>),
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">log</span>::<span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;unsupported message type&quot;</span>);
             <span class="ident">rerror</span>(<span class="string">&quot;unsupported message type&quot;</span>)

@@ -55,7 +55,7 @@
     <span class="kw">match</span> <span class="ident">state</span>
         .<span class="ident">lock</span>()
         .<span class="ident">unwrap</span>()
-        .<span class="ident">allocate_fid</span>(<span class="ident">req</span>.<span class="ident">fid</span>, <span class="ident">static_file_system</span>::<span class="ident">ROOT</span>.<span class="ident">qid</span>())
+        .<span class="ident">allocate_fid</span>(<span class="ident">req</span>.<span class="ident">fid</span>, <span class="kw-2">&amp;</span><span class="ident">static_file_system</span>::<span class="ident">ROOT</span>)
     {
         <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> (),
         <span class="prelude-val">Err</span>(<span class="ident">e</span> @ <span class="ident">AllocateFidError</span>::<span class="ident">FidAlreadyInUse</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="ident">rerror</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()),

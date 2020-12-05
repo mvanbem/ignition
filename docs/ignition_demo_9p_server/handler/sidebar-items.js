@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["handle_request",""],["rerror",""]],"mod":[["attach",""],["version",""]]});
+initSidebarItems({"fn":[["handle_request",""],["rerror",""]],"mod":[["attach",""],["clunk",""],["stat",""],["version",""]]});

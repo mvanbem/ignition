@@ -565,63 +565,18 @@
 <span id="562">562</span>
 <span id="563">563</span>
 <span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Message types.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">ext</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">wire</span>::{<span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Fid</span>, <span class="ident">OpenMode</span>, <span class="ident">Qid</span>, <span class="ident">Stat</span>, <span class="ident">Tag</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+<span class="kw">use</span> <span class="ident">ignition_9p_wire_derive</span>::{<span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="self">self</span>, <span class="ident">Read</span>, <span class="ident">Write</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">raw</span> {
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">ext</span>::{<span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Tag</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+    <span class="kw">use</span> <span class="ident">ignition_9p_wire_derive</span>::{<span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>};
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
     <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessageType</span>(<span class="kw">pub</span> <span class="ident">u8</span>);
     <span class="kw">impl</span> <span class="ident">MessageType</span> {
         <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TVERSION</span>: <span class="ident">MessageType</span> <span class="op">=</span> <span class="ident">MessageType</span>(<span class="number">100</span>);
@@ -652,62 +607,6 @@
         <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">RSTAT</span>: <span class="ident">MessageType</span> <span class="op">=</span> <span class="ident">MessageType</span>(<span class="number">125</span>);
         <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TWSTAT</span>: <span class="ident">MessageType</span> <span class="op">=</span> <span class="ident">MessageType</span>(<span class="number">126</span>);
         <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">RWSTAT</span>: <span class="ident">MessageType</span> <span class="op">=</span> <span class="ident">MessageType</span>(<span class="number">127</span>);
-
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">io</span>::<span class="ident">Read</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MessageType</span><span class="op">&gt;</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">MessageType</span>(<span class="ident">r</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span>))
-        }
-
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io</span>::<span class="ident">Write</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-            <span class="ident">w</span>.<span class="ident">write_u8</span>(<span class="self">self</span>.<span class="number">0</span>)
-        }
-    }
-
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Header</span> {
-        <span class="kw">pub</span> <span class="ident">message_type</span>: <span class="ident">MessageType</span>,
-        <span class="kw">pub</span> <span class="ident">tag</span>: <span class="ident">Tag</span>,
-    }
-    <span class="kw">impl</span> <span class="ident">Header</span> {
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">io</span>::<span class="ident">Read</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Header</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">message_type</span> <span class="op">=</span> <span class="ident">MessageType</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">Tag</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">Header</span> { <span class="ident">message_type</span>, <span class="ident">tag</span> })
-        }
-
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io</span>::<span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-            <span class="self">self</span>.<span class="ident">message_type</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">tag</span>.<span class="ident">write</span>(<span class="ident">w</span>)
-        }
-    }
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="kw">mod</span> <span class="ident">tests</span> {
-        <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Header</span>, <span class="ident">MessageType</span>};
-        <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Tag</span>;
-        <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
-
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">header_read</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>([<span class="number">100</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>]);
-            <span class="macro">assert_eq</span><span class="macro">!</span>(
-                <span class="ident">Header</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
-                <span class="ident">Header</span> {
-                    <span class="ident">message_type</span>: <span class="ident">MessageType</span>::<span class="ident">TVERSION</span>,
-                    <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
-                },
-            );
-        }
-
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">header_write</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-            <span class="ident">Header</span> {
-                <span class="ident">message_type</span>: <span class="ident">MessageType</span>::<span class="ident">RVERSION</span>,
-                <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0x1234</span>),
-            }
-            .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
-            .<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>, <span class="kw-2">&amp;</span>[<span class="number">101</span>, <span class="number">0x34</span>, <span class="number">0x12</span>]);
-        }
     }
 }
 
@@ -716,114 +615,36 @@
     <span class="kw">pub</span> <span class="ident">tag</span>: <span class="ident">Tag</span>,
     <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">MessageBody</span>,
 }
-<span class="kw">impl</span> <span class="ident">Message</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">io</span>::<span class="ident">Read</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Message</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">raw</span>::<span class="ident">Header</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
+<span class="kw">impl</span> <span class="ident">ReadFrom</span> <span class="kw">for</span> <span class="ident">Message</span> {
+    <span class="kw">fn</span> <span class="ident">read_from</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">message_type</span> <span class="op">=</span> <span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(<span class="ident">Message</span> {
-            <span class="ident">tag</span>: <span class="ident">header</span>.<span class="ident">tag</span>,
-            <span class="ident">body</span>: <span class="kw">match</span> <span class="ident">header</span>.<span class="ident">message_type</span> {
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TVERSION</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">msize</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="ident">TVersion</span> { <span class="ident">msize</span>, <span class="ident">version</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RVERSION</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">msize</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">RVersion</span>(<span class="ident">RVersion</span> { <span class="ident">msize</span>, <span class="ident">version</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TATTACH</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">afid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">uname</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">aname</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TAttach</span>(<span class="ident">TAttach</span> {
-                        <span class="ident">fid</span>,
-                        <span class="ident">afid</span>,
-                        <span class="ident">uname</span>,
-                        <span class="ident">aname</span>,
-                    })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RATTACH</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RAttach</span>(<span class="ident">RAttach</span> { <span class="ident">qid</span>: <span class="ident">Qid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span> }),
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RERROR</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RError</span>(<span class="ident">RError</span> {
-                    <span class="ident">ename</span>: <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>,
-                }),
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWALK</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">newfid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">names</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_array</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">read_string</span>())<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">TWalk</span> { <span class="ident">fid</span>, <span class="ident">newfid</span>, <span class="ident">names</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RWALK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RWalk</span>(<span class="ident">RWalk</span> {
-                    <span class="ident">qids</span>: <span class="ident">r</span>.<span class="ident">read_array</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">Qid</span>::<span class="ident">read</span>(<span class="ident">r</span>))<span class="question-mark">?</span>,
-                }),
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TOPEN</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="ident">OpenMode</span>(<span class="ident">r</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span>);
-                    <span class="ident">MessageBody</span>::<span class="ident">TOpen</span>(<span class="ident">TOpen</span> { <span class="ident">fid</span>, <span class="ident">mode</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">ROPEN</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">qid</span> <span class="op">=</span> <span class="ident">Qid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">iounit</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">ROpen</span>(<span class="ident">ROpen</span> { <span class="ident">qid</span>, <span class="ident">iounit</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TCREATE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_string</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">perm</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="ident">OpenMode</span>(<span class="ident">r</span>.<span class="ident">read_u8</span>()<span class="question-mark">?</span>);
-                    <span class="ident">MessageBody</span>::<span class="ident">TCreate</span>(<span class="ident">TCreate</span> {
-                        <span class="ident">fid</span>,
-                        <span class="ident">name</span>,
-                        <span class="ident">perm</span>,
-                        <span class="ident">mode</span>,
-                    })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RCREATE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">qid</span> <span class="op">=</span> <span class="ident">Qid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">iounit</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">RCreate</span>(<span class="ident">RCreate</span> { <span class="ident">qid</span>, <span class="ident">iounit</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TREAD</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u64</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TRead</span>(<span class="ident">TRead</span> { <span class="ident">fid</span>, <span class="ident">offset</span>, <span class="ident">count</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RREAD</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32_prefixed_bytes</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">RRead</span>(<span class="ident">RRead</span> { <span class="ident">data</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWRITE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u64</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32_prefixed_bytes</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TWrite</span>(<span class="ident">TWrite</span> { <span class="ident">fid</span>, <span class="ident">offset</span>, <span class="ident">data</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RWRITE</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">read_u32</span>()<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">RWrite</span>(<span class="ident">RWrite</span> { <span class="ident">count</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TCLUNK</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TClunk</span>(<span class="ident">TClunk</span> { <span class="ident">fid</span> })
-                }
+            <span class="ident">tag</span>,
+            <span class="ident">body</span>: <span class="kw">match</span> <span class="ident">message_type</span> {
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TVERSION</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RVERSION</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RVersion</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TATTACH</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TAttach</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RATTACH</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RAttach</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RERROR</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RError</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWALK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RWALK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RWalk</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TOPEN</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TOpen</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">ROPEN</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">ROpen</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TCREATE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TCreate</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RCREATE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RCreate</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TREAD</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TRead</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RREAD</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RRead</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWRITE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TWrite</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RWRITE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RWrite</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TCLUNK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TClunk</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
                 <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RCLUNK</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RClunk</span>,
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TSTAT</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TStat</span>(<span class="ident">TStat</span> { <span class="ident">fid</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RSTAT</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">stat</span> <span class="op">=</span> <span class="ident">Stat</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">RStat</span> { <span class="ident">stat</span> })
-                }
-                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWSTAT</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">fid</span> <span class="op">=</span> <span class="ident">Fid</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">stat</span> <span class="op">=</span> <span class="ident">Stat</span>::<span class="ident">read</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-                    <span class="ident">MessageBody</span>::<span class="ident">TWstat</span>(<span class="ident">TWstat</span> { <span class="ident">fid</span>, <span class="ident">stat</span> })
-                }
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TSTAT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TStat</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RSTAT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
+                <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">TWSTAT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">TWstat</span>(<span class="ident">ReadFrom</span>::<span class="ident">read_from</span>(<span class="ident">r</span>)<span class="question-mark">?</span>),
                 <span class="ident">raw</span>::<span class="ident">MessageType</span>::<span class="ident">RWSTAT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MessageBody</span>::<span class="ident">RWstat</span>,
-                <span class="ident">message_type</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
                         <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
                         <span class="ident">ReadMessageError</span>::<span class="ident">UnsupportedMessageType</span> { <span class="ident">message_type</span> },
@@ -832,92 +653,32 @@
             },
         })
     }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io</span>::<span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">raw</span>::<span class="ident">Header</span> {
-            <span class="ident">message_type</span>: <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">message_type</span>(),
-            <span class="ident">tag</span>: <span class="self">self</span>.<span class="ident">tag</span>,
-        }
-        .<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">body</span> {
-            <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="ident">TVersion</span> { <span class="ident">msize</span>, <span class="kw-2">ref</span> <span class="ident">version</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">msize</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">version</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RVersion</span>(<span class="ident">RVersion</span> { <span class="ident">msize</span>, <span class="kw-2">ref</span> <span class="ident">version</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">msize</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">version</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">TAttach</span>(<span class="ident">TAttach</span> {
-                <span class="ident">fid</span>,
-                <span class="ident">afid</span>,
-                <span class="kw-2">ref</span> <span class="ident">uname</span>,
-                <span class="kw-2">ref</span> <span class="ident">aname</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">afid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">uname</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">aname</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RAttach</span>(<span class="ident">RAttach</span> { <span class="ident">qid</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">qid</span>.<span class="ident">write</span>(<span class="ident">w</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">RError</span>(<span class="ident">RError</span> { <span class="kw-2">ref</span> <span class="ident">ename</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">ename</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">TWalk</span> {
-                <span class="ident">fid</span>,
-                <span class="ident">newfid</span>,
-                <span class="kw-2">ref</span> <span class="ident">names</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">newfid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_array</span>(<span class="ident">names</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">name</span><span class="op">|</span> <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">name</span>))
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RWalk</span>(<span class="ident">RWalk</span> { <span class="kw-2">ref</span> <span class="ident">qids</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write_array</span>(<span class="ident">qids</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">qid</span><span class="op">|</span> <span class="ident">qid</span>.<span class="ident">write</span>(<span class="ident">w</span>)),
-            <span class="ident">MessageBody</span>::<span class="ident">TOpen</span>(<span class="ident">TOpen</span> { <span class="ident">fid</span>, <span class="ident">mode</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u8</span>(<span class="ident">mode</span>.<span class="ident">into</span>())
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">ROpen</span>(<span class="ident">ROpen</span> { <span class="ident">qid</span>, <span class="ident">iounit</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">qid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">iounit</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">TCreate</span>(<span class="ident">TCreate</span> {
-                <span class="ident">fid</span>,
-                <span class="kw-2">ref</span> <span class="ident">name</span>,
-                <span class="ident">perm</span>,
-                <span class="ident">mode</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_string</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">perm</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u8</span>(<span class="ident">mode</span>.<span class="ident">into</span>())
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RCreate</span>(<span class="ident">RCreate</span> { <span class="ident">qid</span>, <span class="ident">iounit</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">qid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">iounit</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">TRead</span>(<span class="ident">TRead</span> { <span class="ident">fid</span>, <span class="ident">offset</span>, <span class="ident">count</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u64</span>(<span class="ident">offset</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">count</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RRead</span>(<span class="ident">RRead</span> { <span class="kw-2">ref</span> <span class="ident">data</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write_u32_prefixed_bytes</span>(<span class="ident">data</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">TWrite</span>(<span class="ident">TWrite</span> {
-                <span class="ident">fid</span>,
-                <span class="ident">offset</span>,
-                <span class="kw-2">ref</span> <span class="ident">data</span>,
-            }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u64</span>(<span class="ident">offset</span>)<span class="question-mark">?</span>;
-                <span class="ident">w</span>.<span class="ident">write_u32_prefixed_bytes</span>(<span class="ident">data</span>)
-            }
-            <span class="ident">MessageBody</span>::<span class="ident">RWrite</span>(<span class="ident">RWrite</span> { <span class="ident">count</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write_u32</span>(<span class="ident">count</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">TClunk</span>(<span class="ident">TClunk</span> { <span class="ident">fid</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>),
+}
+<span class="kw">impl</span> <span class="ident">WriteTo</span> <span class="kw">for</span> <span class="ident">Message</span> {
+    <span class="kw">fn</span> <span class="ident">write_to</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">body</span>.<span class="ident">message_type</span>().<span class="ident">write_to</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">tag</span>.<span class="ident">write_to</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
+        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">body</span> {
+            <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RVersion</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TAttach</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RAttach</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RError</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RWalk</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TOpen</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">ROpen</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TCreate</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RCreate</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TRead</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RRead</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TWrite</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RWrite</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TClunk</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
             <span class="ident">MessageBody</span>::<span class="ident">RClunk</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
-            <span class="ident">MessageBody</span>::<span class="ident">TStat</span>(<span class="ident">TStat</span> { <span class="ident">fid</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">RStat</span> { <span class="kw-2">ref</span> <span class="ident">stat</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">stat</span>.<span class="ident">write</span>(<span class="ident">w</span>),
-            <span class="ident">MessageBody</span>::<span class="ident">TWstat</span>(<span class="ident">TWstat</span> { <span class="ident">fid</span>, <span class="kw-2">ref</span> <span class="ident">stat</span> }) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">fid</span>.<span class="ident">write</span>(<span class="ident">w</span>)<span class="question-mark">?</span>;
-                <span class="ident">stat</span>.<span class="ident">write</span>(<span class="ident">w</span>)
-            }
+            <span class="ident">MessageBody</span>::<span class="ident">TStat</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
+            <span class="ident">MessageBody</span>::<span class="ident">TWstat</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">v</span>.<span class="ident">write_to</span>(<span class="ident">w</span>),
             <span class="ident">MessageBody</span>::<span class="ident">RWstat</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
         }
     }
@@ -990,19 +751,19 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TVersion</span> {
     <span class="kw">pub</span> <span class="ident">msize</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RVersion</span> {
     <span class="kw">pub</span> <span class="ident">msize</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TAttach</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">afid</span>: <span class="ident">Fid</span>,
@@ -1010,41 +771,43 @@
     <span class="kw">pub</span> <span class="ident">aname</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RAttach</span> {
     <span class="kw">pub</span> <span class="ident">qid</span>: <span class="ident">Qid</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RError</span> {
     <span class="kw">pub</span> <span class="ident">ename</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TWalk</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">newfid</span>: <span class="ident">Fid</span>,
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">count_prefixed</span> <span class="op">=</span> <span class="string">&quot;u16&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">names</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RWalk</span> {
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">count_prefixed</span> <span class="op">=</span> <span class="string">&quot;u16&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">qids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Qid</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TOpen</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">mode</span>: <span class="ident">OpenMode</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ROpen</span> {
     <span class="kw">pub</span> <span class="ident">qid</span>: <span class="ident">Qid</span>,
     <span class="kw">pub</span> <span class="ident">iounit</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TCreate</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
@@ -1052,70 +815,74 @@
     <span class="kw">pub</span> <span class="ident">mode</span>: <span class="ident">OpenMode</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RCreate</span> {
     <span class="kw">pub</span> <span class="ident">qid</span>: <span class="ident">Qid</span>,
     <span class="kw">pub</span> <span class="ident">iounit</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TRead</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">offset</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">count</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RRead</span> {
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">length_prefixed_bytes</span> <span class="op">=</span> <span class="string">&quot;u32&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TWrite</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
     <span class="kw">pub</span> <span class="ident">offset</span>: <span class="ident">u64</span>,
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">length_prefixed_bytes</span> <span class="op">=</span> <span class="string">&quot;u32&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RWrite</span> {
     <span class="kw">pub</span> <span class="ident">count</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TClunk</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TStat</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RStat</span> {
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">size_prefixed</span> <span class="op">=</span> <span class="string">&quot;u16&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">stat</span>: <span class="ident">Stat</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TWstat</span> {
     <span class="kw">pub</span> <span class="ident">fid</span>: <span class="ident">Fid</span>,
+    <span class="attribute">#[<span class="ident">ignition_9p_wire</span>(<span class="ident">size_prefixed</span> <span class="op">=</span> <span class="string">&quot;u16&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">stat</span>: <span class="ident">Stat</span>,
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Message</span>, <span class="ident">MessageBody</span>, <span class="ident">RError</span>, <span class="ident">RVersion</span>, <span class="ident">TVersion</span>};
-    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Tag</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Message</span>, <span class="ident">MessageBody</span>, <span class="ident">RError</span>, <span class="ident">RStat</span>, <span class="ident">RVersion</span>, <span class="ident">TVersion</span>, <span class="ident">TWalk</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">wire</span>::{<span class="ident">ReadFrom</span>, <span class="ident">WriteTo</span>};
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Fid</span>, <span class="ident">FileType</span>, <span class="ident">Qid</span>, <span class="ident">Stat</span>, <span class="ident">StatMode</span>, <span class="ident">Tag</span>};
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">message_tversion_read</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>([
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
             <span class="number">100</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x78</span>, <span class="number">0x56</span>, <span class="number">0x34</span>, <span class="number">0x12</span>, <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x39</span>, <span class="number">0x50</span>, <span class="number">0x32</span>, <span class="number">0x30</span>, <span class="number">0x30</span>, <span class="number">0x30</span>,
-        ]);
+        ];
         <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">Message</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">Message</span>::<span class="ident">read_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
             <span class="ident">Message</span> {
                 <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
                 <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">TVersion</span>(<span class="ident">TVersion</span> {
@@ -1124,6 +891,7 @@
                 }),
             },
         );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="number">0</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -1136,7 +904,7 @@
                 <span class="ident">version</span>: <span class="string">&quot;9P2000&quot;</span>.<span class="ident">to_string</span>(),
             }),
         }
-        .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
+        .<span class="ident">write_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
         .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">data</span>.<span class="ident">as_slice</span>(),
@@ -1149,11 +917,11 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">message_rversion_read</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>([
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
             <span class="number">101</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x78</span>, <span class="number">0x56</span>, <span class="number">0x34</span>, <span class="number">0x12</span>, <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x39</span>, <span class="number">0x50</span>, <span class="number">0x32</span>, <span class="number">0x30</span>, <span class="number">0x30</span>, <span class="number">0x30</span>,
-        ]);
+        ];
         <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">Message</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">Message</span>::<span class="ident">read_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
             <span class="ident">Message</span> {
                 <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
                 <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">RVersion</span>(<span class="ident">RVersion</span> {
@@ -1162,6 +930,7 @@
                 }),
             },
         );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="number">0</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -1174,7 +943,7 @@
                 <span class="ident">version</span>: <span class="string">&quot;9P2000&quot;</span>.<span class="ident">to_string</span>(),
             }),
         }
-        .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
+        .<span class="ident">write_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
         .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">data</span>.<span class="ident">as_slice</span>(),
@@ -1187,11 +956,11 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">message_rerror_read</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">Cursor</span>::<span class="ident">new</span>([
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
             <span class="number">107</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x08</span>, <span class="number">0x00</span>, <span class="number">0x69</span>, <span class="number">0x74</span>, <span class="number">0x20</span>, <span class="number">0x62</span>, <span class="number">0x72</span>, <span class="number">0x6f</span>, <span class="number">0x6b</span>, <span class="number">0x65</span>,
-        ]);
+        ];
         <span class="macro">assert_eq</span><span class="macro">!</span>(
-            <span class="ident">Message</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">Message</span>::<span class="ident">read_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
             <span class="ident">Message</span> {
                 <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
                 <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">RError</span>(<span class="ident">RError</span> {
@@ -1199,6 +968,7 @@
                 }),
             },
         );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="number">0</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -1210,11 +980,153 @@
                 <span class="ident">ename</span>: <span class="string">&quot;it broke&quot;</span>.<span class="ident">to_string</span>(),
             }),
         }
-        .<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
+        .<span class="ident">write_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
         .<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(
             <span class="ident">data</span>.<span class="ident">as_slice</span>(),
             [<span class="number">107</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x08</span>, <span class="number">0x00</span>, <span class="number">0x69</span>, <span class="number">0x74</span>, <span class="number">0x20</span>, <span class="number">0x62</span>, <span class="number">0x72</span>, <span class="number">0x6f</span>, <span class="number">0x6b</span>, <span class="number">0x65</span>],
+        );
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">message_twalk_read</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
+            <span class="number">110</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x84</span>, <span class="number">0x83</span>, <span class="number">0x82</span>, <span class="number">0x81</span>, <span class="number">0x94</span>, <span class="number">0x93</span>, <span class="number">0x92</span>, <span class="number">0x91</span>, <span class="number">0x02</span>, <span class="number">0x00</span>, <span class="number">0x03</span>,
+            <span class="number">0x00</span>, <span class="string">&#39;f&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;o&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;o&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="number">0x03</span>, <span class="number">0x00</span>, <span class="string">&#39;b&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;a&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;r&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>,
+        ];
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">Message</span>::<span class="ident">read_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">Message</span> {
+                <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
+                <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">TWalk</span> {
+                    <span class="ident">fid</span>: <span class="ident">Fid</span>(<span class="number">0x81828384</span>),
+                    <span class="ident">newfid</span>: <span class="ident">Fid</span>(<span class="number">0x91929394</span>),
+                    <span class="ident">names</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;foo&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;bar&quot;</span>.<span class="ident">to_string</span>()],
+                }),
+            },
+        );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="number">0</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">message_twalk_write</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="ident">Message</span> {
+            <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
+            <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">TWalk</span>(<span class="ident">TWalk</span> {
+                <span class="ident">fid</span>: <span class="ident">Fid</span>(<span class="number">0x81828384</span>),
+                <span class="ident">newfid</span>: <span class="ident">Fid</span>(<span class="number">0x91929394</span>),
+                <span class="ident">names</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;foo&quot;</span>.<span class="ident">to_string</span>(), <span class="string">&quot;bar&quot;</span>.<span class="ident">to_string</span>()],
+            }),
+        }
+        .<span class="ident">write_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
+        .<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">data</span>.<span class="ident">as_slice</span>(),
+            [
+                <span class="number">110</span>, <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="number">0x84</span>, <span class="number">0x83</span>, <span class="number">0x82</span>, <span class="number">0x81</span>, <span class="number">0x94</span>, <span class="number">0x93</span>, <span class="number">0x92</span>, <span class="number">0x91</span>, <span class="number">0x02</span>, <span class="number">0x00</span>, <span class="number">0x03</span>,
+                <span class="number">0x00</span>, <span class="string">&#39;f&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;o&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;o&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="number">0x03</span>, <span class="number">0x00</span>, <span class="string">&#39;b&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;a&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="string">&#39;r&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>
+            ],
+        )
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">message_rstat_read</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">u8</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
+            <span class="number">125</span>, <span class="comment">// message_type</span>
+            <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="comment">// tag</span>
+            <span class="number">50</span>, <span class="number">0</span>, <span class="comment">// stat outer length</span>
+            <span class="number">48</span>, <span class="number">0</span>, <span class="comment">// stat inner length</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// kernel_type</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// kernel_dev</span>
+            <span class="number">0x00</span>, <span class="comment">// qid.file_type</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// qid.version</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// qid.path</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// mode</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// atime</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// mtime</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// length</span>
+            <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="string">&#39;/&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="comment">// name</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// uid</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// gid</span>
+            <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// muid</span>
+        ];
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">Message</span>::<span class="ident">read_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">Message</span> {
+                <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
+                <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">RStat</span> {
+                    <span class="ident">stat</span>: <span class="ident">Stat</span> {
+                        <span class="ident">kernel_type</span>: <span class="number">0</span>,
+                        <span class="ident">kernel_dev</span>: <span class="number">0</span>,
+                        <span class="ident">qid</span>: <span class="ident">Qid</span> {
+                            <span class="ident">file_type</span>: <span class="ident">FileType</span>::<span class="ident">default</span>(),
+                            <span class="ident">version</span>: <span class="number">0</span>,
+                            <span class="ident">path</span>: <span class="number">0</span>,
+                        },
+                        <span class="ident">mode</span>: <span class="ident">StatMode</span>::<span class="ident">default</span>(),
+                        <span class="ident">atime</span>: <span class="number">0</span>,
+                        <span class="ident">mtime</span>: <span class="number">0</span>,
+                        <span class="ident">length</span>: <span class="number">0</span>,
+                        <span class="ident">name</span>: <span class="string">&quot;/&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="ident">uid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="ident">gid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                        <span class="ident">muid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                    },
+                }),
+            },
+        );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">len</span>(), <span class="number">0</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">message_rstat_write</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="ident">Message</span> {
+            <span class="ident">tag</span>: <span class="ident">Tag</span>(<span class="number">0xabcd</span>),
+            <span class="ident">body</span>: <span class="ident">MessageBody</span>::<span class="ident">RStat</span>(<span class="ident">RStat</span> {
+                <span class="ident">stat</span>: <span class="ident">Stat</span> {
+                    <span class="ident">kernel_type</span>: <span class="number">0</span>,
+                    <span class="ident">kernel_dev</span>: <span class="number">0</span>,
+                    <span class="ident">qid</span>: <span class="ident">Qid</span> {
+                        <span class="ident">file_type</span>: <span class="ident">FileType</span>::<span class="ident">default</span>(),
+                        <span class="ident">version</span>: <span class="number">0</span>,
+                        <span class="ident">path</span>: <span class="number">0</span>,
+                    },
+                    <span class="ident">mode</span>: <span class="ident">StatMode</span>::<span class="ident">default</span>(),
+                    <span class="ident">atime</span>: <span class="number">0</span>,
+                    <span class="ident">mtime</span>: <span class="number">0</span>,
+                    <span class="ident">length</span>: <span class="number">0</span>,
+                    <span class="ident">name</span>: <span class="string">&quot;/&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">uid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">gid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                    <span class="ident">muid</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>(),
+                },
+            }),
+        }
+        .<span class="ident">write_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)
+        .<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">data</span>.<span class="ident">as_slice</span>(),
+            [
+                <span class="number">125</span>, <span class="comment">// message_type</span>
+                <span class="number">0xcd</span>, <span class="number">0xab</span>, <span class="comment">// tag</span>
+                <span class="number">50</span>, <span class="number">0</span>, <span class="comment">// stat outer length</span>
+                <span class="number">48</span>, <span class="number">0</span>, <span class="comment">// stat inner length</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// kernel_type</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// kernel_dev</span>
+                <span class="number">0x00</span>, <span class="comment">// qid.file_type</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// qid.version</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// qid.path</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// mode</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// atime</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// mtime</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// length</span>
+                <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="string">&#39;/&#39;</span> <span class="kw">as</span> <span class="ident">u8</span>, <span class="comment">// name</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// uid</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// gid</span>
+                <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="comment">// muid</span>
+            ],
         );
     }
 }
