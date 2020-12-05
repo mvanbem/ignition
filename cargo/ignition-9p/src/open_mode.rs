@@ -20,7 +20,6 @@ bitfield::bitfield! {
         // `bitfield!` and I'm not sure why.
     )]
     pub struct OpenMode(u8);
-    impl Debug;
     pub from into OpenAccess, access, set_access: 1, 0;
     pub trunc, set_trunc: 4;
     pub rclose, set_rclose: 6;
@@ -46,6 +45,18 @@ impl OpenMode {
     pub fn with_rclose(mut self, rclose: bool) -> Self {
         self.set_rclose(rclose);
         self
+    }
+}
+impl std::fmt::Debug for OpenMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OpenMode({:?}", self.access())?;
+        if self.trunc() {
+            write!(f, "|TRUNC")?;
+        }
+        if self.rclose() {
+            write!(f, "|RCLOSE")?;
+        }
+        write!(f, ")")
     }
 }
 impl From<OpenMode> for u8 {

@@ -18,7 +18,6 @@ bitfield::bitfield! {
         // `bitfield!` and I'm not sure why.
     )]
     pub struct UnixTriplet(u8);
-    impl Debug;
     pub read, set_read: 2;
     pub write, set_write: 1;
     pub execute, set_execute: 0;
@@ -44,6 +43,26 @@ impl UnixTriplet {
     pub fn with_execute(mut self, execute: bool) -> Self {
         self.set_execute(execute);
         self
+    }
+}
+impl std::fmt::Debug for UnixTriplet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.read() {
+            write!(f, "r")?;
+        } else {
+            write!(f, "-")?;
+        }
+        if self.write() {
+            write!(f, "w")?;
+        } else {
+            write!(f, "-")?;
+        }
+        if self.execute() {
+            write!(f, "x")?;
+        } else {
+            write!(f, "-")?;
+        }
+        Ok(())
     }
 }
 impl From<UnixTriplet> for u8 {

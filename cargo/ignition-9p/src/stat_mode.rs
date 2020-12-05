@@ -23,7 +23,6 @@ bitfield::bitfield! {
         // `bitfield!` and I'm not sure why.
     )]
     pub struct StatMode(u32);
-    impl Debug;
     pub from into FileType, file_type, set_file_type: 31, 24;
     pub from into UnixTriplet, user, set_user: 8, 6;
     pub from into UnixTriplet, group, set_group: 5, 3;
@@ -51,6 +50,18 @@ impl StatMode {
     pub fn with_other(mut self, other: UnixTriplet) -> Self {
         self.set_other(other);
         self
+    }
+}
+impl std::fmt::Debug for StatMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "StatMode {{ file_type: {:?}, perm: \"{:?}{:?}{:?}\" }}",
+            self.file_type(),
+            self.user(),
+            self.group(),
+            self.other(),
+        )
     }
 }
 impl DontTouch for StatMode {

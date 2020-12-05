@@ -21,7 +21,6 @@ bitfield::bitfield! {
         // `bitfield!` and I'm not sure why.
     )]
     pub struct FileType(u8);
-    impl Debug;
     pub tmp, set_tmp: 2;
     pub auth, set_auth: 3;
     pub excl, set_excl: 5;
@@ -55,6 +54,29 @@ impl FileType {
     pub fn with_dir(mut self, dir: bool) -> Self {
         self.set_dir(dir);
         self
+    }
+}
+impl std::fmt::Debug for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FileType(")?;
+        if self.dir() {
+            write!(f, "DIR")?;
+        } else {
+            write!(f, "FILE")?;
+        }
+        if self.tmp() {
+            write!(f, "|TMP")?;
+        }
+        if self.auth() {
+            write!(f, "|AUTH")?;
+        }
+        if self.excl() {
+            write!(f, "|EXCL")?;
+        }
+        if self.append() {
+            write!(f, "|APPEND")?;
+        }
+        write!(f, ")")
     }
 }
 impl From<FileType> for u8 {
