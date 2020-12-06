@@ -11,6 +11,9 @@ mod serve;
 /// Maximum message size supported, including the length prefix on the wire.
 const MAX_MSIZE: u32 = 1048576;
 
+/// User name set for all owner, group, and last-modifier fields.
+const USER_NAME: &'static str = "root";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     simple_logger::SimpleLogger::new()

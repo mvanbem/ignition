@@ -1,3 +1,4 @@
+use crate::USER_NAME;
 use ignition_9p::{FileType, Qid, Stat, StatMode, UnixTriplet};
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -160,16 +161,16 @@ impl InnerDirectory {
             qid,
             mode: StatMode::default()
                 .with_file_type(qid.file_type)
-                .with_user(UnixTriplet::RW)
-                .with_group(UnixTriplet::R)
-                .with_other(UnixTriplet::R),
+                .with_user(UnixTriplet::RWX)
+                .with_group(UnixTriplet::RX)
+                .with_other(UnixTriplet::RX),
             atime: 0, // TODO: static timestamp 2020-01-01 00:00:00 UTC
             mtime: 0,
-            length: self.content.len().try_into().unwrap(),
+            length: 0,
             name: self.name.clone(),
-            uid: "root".to_string(),
-            gid: "root".to_string(),
-            muid: "root".to_string(),
+            uid: USER_NAME.to_string(),
+            gid: USER_NAME.to_string(),
+            muid: USER_NAME.to_string(),
         }
     }
 }
@@ -202,9 +203,9 @@ impl InnerFile {
             mtime: 0,
             length: self.content.len().try_into().unwrap(),
             name: self.name.clone(),
-            uid: "root".to_string(),
-            gid: "root".to_string(),
-            muid: "root".to_string(),
+            uid: USER_NAME.to_string(),
+            gid: USER_NAME.to_string(),
+            muid: USER_NAME.to_string(),
         }
     }
 }
