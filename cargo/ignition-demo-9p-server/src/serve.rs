@@ -4,18 +4,17 @@ use ignition_9p::message::Message;
 use ignition_9p::wire::{ReadFrom, WriteTo};
 use pin_utils::pin_mut;
 use std::error::Error;
-use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::LengthDelimitedCodec;
 
 use crate::connection_state::ConnectionState;
-use crate::handler;
+use crate::file_system::FileSystem;
 
-pub async fn serve<S>(stream: S)
+pub async fn serve<S>(stream: S, fs: &'static FileSystem)
 where
     S: AsyncRead + AsyncWrite,
 {
-    match serve_err(stream).await {
+    match serve_err(stream, fs).await {
         Ok(()) => (),
         Err(e) => {
             log::warn!("an error terminated serving a connection: {:?}", e);
@@ -23,7 +22,7 @@ where
     }
 }
 
-async fn serve_err<S>(stream: S) -> Result<(), Box<dyn Error>>
+async fn serve_err<S>(stream: S, fs: &'static FileSystem) -> Result<(), Box<dyn Error>>
 where
     S: AsyncRead + AsyncWrite,
 {
@@ -35,7 +34,7 @@ where
         .length_adjustment(-4)
         .new_framed(stream);
 
-    let state = Arc::new(Mutex::new(ConnectionState::new()));
+    let state = ConnectionState::new(fs);
 
     pin_mut!(framed);
     while let Some(frame) = framed.next().await {
@@ -46,7 +45,7 @@ where
         let mut buf = BytesMut::new().writer();
         let resp = Message {
             tag: req.tag,
-            body: handler::handle_request(&state, &req)?,
+            body: state.handle_request(&req).await?,
         };
         log::info!("response: {:?}", resp);
         resp.write_to(&mut buf)?;

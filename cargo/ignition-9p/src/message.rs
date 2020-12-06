@@ -6,9 +6,11 @@ use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 use std::io::{self, Read, Write};
 
 pub mod raw {
+    use std::fmt::{self, Debug, Display, Formatter};
+
     use ignition_9p_wire_derive::{ReadFrom, WriteTo};
 
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, ReadFrom, WriteTo)]
+    #[derive(Clone, Copy, Eq, PartialEq, ReadFrom, WriteTo)]
     pub struct MessageType(pub u8);
     impl MessageType {
         pub const TVERSION: MessageType = MessageType(100);
@@ -39,6 +41,45 @@ pub mod raw {
         pub const RSTAT: MessageType = MessageType(125);
         pub const TWSTAT: MessageType = MessageType(126);
         pub const RWSTAT: MessageType = MessageType(127);
+    }
+    impl Display for MessageType {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            match *self {
+                MessageType::TVERSION => write!(f, "TVERSION"),
+                MessageType::RVERSION => write!(f, "RVERSION"),
+                MessageType::TAUTH => write!(f, "TAUTH"),
+                MessageType::RAUTH => write!(f, "RAUTH"),
+                MessageType::TATTACH => write!(f, "TATTACH"),
+                MessageType::RATTACH => write!(f, "RATTACH"),
+                MessageType::RERROR => write!(f, "RERROR"),
+                MessageType::TFLUSH => write!(f, "TFLUSH"),
+                MessageType::RFLUSH => write!(f, "RFLUSH"),
+                MessageType::TWALK => write!(f, "TWALK"),
+                MessageType::RWALK => write!(f, "RWALK"),
+                MessageType::TOPEN => write!(f, "TOPEN"),
+                MessageType::ROPEN => write!(f, "ROPEN"),
+                MessageType::TCREATE => write!(f, "TCREATE"),
+                MessageType::RCREATE => write!(f, "RCREATE"),
+                MessageType::TREAD => write!(f, "TREAD"),
+                MessageType::RREAD => write!(f, "RREAD"),
+                MessageType::TWRITE => write!(f, "TWRITE"),
+                MessageType::RWRITE => write!(f, "RWRITE"),
+                MessageType::TCLUNK => write!(f, "TCLUNK"),
+                MessageType::RCLUNK => write!(f, "RCLUNK"),
+                MessageType::TREMOVE => write!(f, "TREMOVE"),
+                MessageType::RREMOVE => write!(f, "RREMOVE"),
+                MessageType::TSTAT => write!(f, "TSTAT"),
+                MessageType::RSTAT => write!(f, "RSTAT"),
+                MessageType::TWSTAT => write!(f, "TWSTAT"),
+                MessageType::RWSTAT => write!(f, "RWSTAT"),
+                _ => write!(f, "{}", self.0),
+            }
+        }
+    }
+    impl Debug for MessageType {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            write!(f, "{}", self)
+        }
     }
 }
 
@@ -304,7 +345,7 @@ pub struct TWstat {
 
 #[cfg(test)]
 mod tests {
-    use super::{Message, MessageBody, RError, RStat, RVersion, TVersion, TWalk};
+    use super::{Message, MessageBody, RError, RRead, RStat, RVersion, TVersion, TWalk};
     use crate::wire::{ReadFrom, WriteTo};
     use crate::{Fid, FileType, Qid, Stat, StatMode, Tag};
 
@@ -340,7 +381,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             data.as_slice(),
-            [
+            &[
                 100, 0x56, 0x34, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30,
                 0x30
             ],
@@ -379,7 +420,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             data.as_slice(),
-            [
+            &[
                 101, 0x56, 0x34, 0x78, 0x56, 0x34, 0x12, 0x06, 0x00, 0x39, 0x50, 0x32, 0x30, 0x30,
                 0x30
             ],
@@ -416,7 +457,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             data.as_slice(),
-            [107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65],
+            &[107, 0xcd, 0xab, 0x08, 0x00, 0x69, 0x74, 0x20, 0x62, 0x72, 0x6f, 0x6b, 0x65],
         );
     }
 
@@ -455,7 +496,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             data.as_slice(),
-            [
+            &[
                 110, 0xcd, 0xab, 0x84, 0x83, 0x82, 0x81, 0x94, 0x93, 0x92, 0x91, 0x02, 0x00, 0x03,
                 0x00, 'f' as u8, 'o' as u8, 'o' as u8, 0x03, 0x00, 'b' as u8, 'a' as u8, 'r' as u8
             ],
@@ -540,7 +581,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             data.as_slice(),
-            [
+            &[
                 125, // message_type
                 0xcd, 0xab, // tag
                 50, 0, // stat outer length
@@ -559,6 +600,40 @@ mod tests {
                 0x00, 0x00, // gid
                 0x00, 0x00, // muid
             ],
+        );
+    }
+
+    #[test]
+    fn message_rread_read() {
+        let mut data: &'static [u8] = &[
+            117, 0xcd, 0xab, 8, 0, 0, 0, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+        ];
+        assert_eq!(
+            Message::read_from(&mut data).unwrap(),
+            Message {
+                tag: Tag(0xabcd),
+                body: MessageBody::RRead(RRead {
+                    data: vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef],
+                }),
+            },
+        );
+        assert_eq!(data.len(), 0);
+    }
+
+    #[test]
+    fn message_rread_write() {
+        let mut data = vec![];
+        Message {
+            tag: Tag(0xabcd),
+            body: MessageBody::RRead(RRead {
+                data: vec![0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef],
+            }),
+        }
+        .write_to(&mut data)
+        .unwrap();
+        assert_eq!(
+            data.as_slice(),
+            &[117, 0xcd, 0xab, 8, 0, 0, 0, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,],
         );
     }
 }
