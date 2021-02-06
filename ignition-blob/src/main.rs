@@ -1,10 +1,12 @@
-use crate::file_system::{tokio::tokio_file_system, FileSystem};
 use sha2::{Digest, Sha256};
+use std::fmt::{self, Display, Formatter};
 use std::io::{self, Read, SeekFrom};
 use std::path::PathBuf;
-use tokio::prelude::*;
-use tokio_compat_02::FutureExt;
+use std::str::FromStr;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use warp::Filter;
+
+use crate::file_system::{tokio::tokio_file_system, FileSystem};
 
 mod file_system;
 
@@ -17,9 +19,9 @@ async fn main() {
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
+
     warp::serve(filter(tokio_file_system()))
         .run(([127, 0, 0, 1], 3030))
-        .compat()
         .await;
 }
 
@@ -31,6 +33,7 @@ where
         .and(warp::get())
         .and(with_file_system::<F>(file_system.clone()))
         .and_then(get_blob::<F>);
+
     let blob_collection = warp::path::end()
         .and(warp::post())
         .and(warp::filters::body::aggregate())
@@ -88,6 +91,7 @@ where
                 .unwrap();
         }
     });
+
     Ok(http::Response::builder()
         .status(200)
         .header("Content-Length", len)
@@ -98,11 +102,13 @@ where
 struct WarpBufReader<T: warp::Buf> {
     buf: T,
 }
+
 impl<T: warp::Buf> WarpBufReader<T> {
     fn new(buf: T) -> WarpBufReader<T> {
         WarpBufReader { buf }
     }
 }
+
 impl<T: warp::Buf> Read for WarpBufReader<T> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let len = std::cmp::min(self.buf.remaining(), buf.len());
@@ -123,6 +129,7 @@ where
             internal_server_error()
         })?
     };
+
     // Open the temporary file for use as a streaming destination.
     let mut temp_file = {
         file_system.create(&temp_path).await.map_err(|e| {
@@ -205,7 +212,9 @@ where
 
 #[derive(Debug)]
 struct InternalServerError;
+
 impl warp::reject::Reject for InternalServerError {}
+
 fn internal_server_error() -> warp::reject::Rejection {
     warp::reject::custom(InternalServerError)
 }
@@ -215,7 +224,8 @@ struct BlobId {
     algorithm: HashAlgorithm,
     hash: Box<[u8]>,
 }
-impl std::str::FromStr for BlobId {
+
+impl FromStr for BlobId {
     type Err = ();
     fn from_str(s: &str) -> Result<BlobId, ()> {
         let mut parts = s.splitn(2, ':');
@@ -225,8 +235,9 @@ impl std::str::FromStr for BlobId {
         Ok(BlobId { algorithm, hash })
     }
 }
-impl std::fmt::Display for BlobId {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+
+impl Display for BlobId {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", self.algorithm)?;
         let mut hash_hex = [0; 64];
         hex::encode_to_slice(&*self.hash, &mut hash_hex[..]).unwrap();
@@ -287,6 +298,7 @@ mod blob_id_tests {
 enum HashAlgorithm {
     Sha256,
 }
+
 impl HashAlgorithm {
     fn parse(text: &str) -> Option<HashAlgorithm> {
         match text {
@@ -295,8 +307,9 @@ impl HashAlgorithm {
         }
     }
 }
-impl std::fmt::Display for HashAlgorithm {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+
+impl Display for HashAlgorithm {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
             "{}:",

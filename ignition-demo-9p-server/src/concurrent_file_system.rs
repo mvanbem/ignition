@@ -2,17 +2,19 @@
 
 use ignition_9p::OpenMode;
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 /// A handle to a space in which [`Qid`]s are unique. One per 9p server.
 #[derive(Clone)]
 pub struct QidSpace {
     inner: Arc<Mutex<InnerQidSpace>>,
 }
+
 struct InnerQidSpace {
     next_path: u64,
 }
+
 impl QidSpace {
     pub fn new() -> QidSpace {
         QidSpace {
@@ -39,6 +41,7 @@ pub trait Node {
 pub struct Directory {
     inner: Arc<Mutex<InnerDirectory>>,
 }
+
 pub struct InnerDirectory {
     qid_space: QidSpace,
     frozen: bool,
@@ -49,6 +52,7 @@ pub struct InnerDirectory {
     qid_version: u32,
     entries: HashMap<String, Box<dyn Node>>,
 }
+
 impl Directory {
     pub fn new_root(qid_space: &QidSpace) -> Directory {
         let dir = Directory {
@@ -70,6 +74,7 @@ impl Directory {
         }
         dir
     }
+
     pub fn create(&self, name: &str, perm: u32, _mode: OpenMode) -> Result<Box<dyn Node>, FsError> {
         let inner = self.inner.lock().unwrap();
         if inner.frozen {
@@ -86,10 +91,12 @@ impl Directory {
         fs_error("idk")
     }
 }
+
 impl Node for Directory {
     fn boxed_clone(&self) -> Box<dyn Node> {
         Box::new(self.clone())
     }
+
     fn freeze(&self) {
         let mut inner = self.inner.lock().unwrap();
         if !inner.frozen {
@@ -99,14 +106,9 @@ impl Node for Directory {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("{0}")]
 pub struct FsError(&'static str);
-impl std::fmt::Display for FsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-impl Error for FsError {}
 
 fn fs_error<T>(msg: &'static str) -> Result<T, FsError> {
     Err(FsError(msg))

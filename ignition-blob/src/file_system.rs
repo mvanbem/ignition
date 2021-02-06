@@ -1,5 +1,4 @@
-use ::tokio::io::AsyncSeek;
-use ::tokio::prelude::*;
+use ::tokio::io::{AsyncRead, AsyncSeek, AsyncWrite};
 use async_trait::async_trait;
 use std::io;
 use std::path::{Path, PathBuf};

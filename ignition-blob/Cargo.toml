@@ -9,17 +9,16 @@ license = "MIT"
 
 [dependencies]
 async-trait = "0.1"
-bytes = "0.6.0"
+bytes = "1"
 hex = "0.4"
 http = "0.2"
-hyper = "0.13"
+hyper = "0.14"
 log = "0.4"
-rand = "0.7"
+rand = "0.8"
 sha2 = "0.9"
 simple_logger = "1"
-tokio-compat-02 = "0.1"
-warp = "0.2"
+warp = "0.3"
 
 [dependencies.tokio]
-version = "0.3"
+version = "1"
 features = ["fs", "io-util", "macros", "net", "rt", "rt-multi-thread"]

@@ -1,4 +1,3 @@
-use crate::file_system::FileSystem;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::io::{self, Cursor, SeekFrom};
@@ -6,25 +5,29 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
-use tokio::io::{AsyncSeek, ReadBuf};
-use tokio::prelude::*;
+use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite, ReadBuf};
+
+use crate::file_system::FileSystem;
 
 #[derive(Clone)]
 pub struct InMemoryFileSystem {
     files: Arc<Mutex<HashMap<PathBuf, Node>>>,
 }
+
 impl InMemoryFileSystem {
     pub fn new() -> InMemoryFileSystem {
         InMemoryFileSystem {
             files: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
     pub fn write(&self, path: impl AsRef<Path>, content: Vec<u8>) {
         self.files.lock().unwrap().insert(
             path.as_ref().to_path_buf(),
             Node::File(Arc::new(Mutex::new(Cursor::new(content)))),
         );
     }
+
     pub fn read(&self, path: impl AsRef<Path>) -> Option<Vec<u8>> {
         match self.files.lock().unwrap().get(path.as_ref()) {
             Some(Node::File(content)) => Some(content.lock().unwrap().get_ref().clone()),
@@ -32,9 +35,11 @@ impl InMemoryFileSystem {
         }
     }
 }
+
 #[async_trait]
 impl FileSystem for InMemoryFileSystem {
     type File = InMemoryFile;
+
     async fn open(&self, path: &Path) -> io::Result<Self::File> {
         eprintln!("open({:?})", path);
         match self.files.lock().unwrap().get(path) {
@@ -43,6 +48,7 @@ impl FileSystem for InMemoryFileSystem {
             None => Err(io::ErrorKind::NotFound.into()),
         }
     }
+
     async fn create(&self, path: &Path) -> io::Result<Self::File> {
         let content = Arc::new(Mutex::new(Cursor::new(vec![])));
         self.files
@@ -51,6 +57,7 @@ impl FileSystem for InMemoryFileSystem {
             .insert(path.to_path_buf(), Node::File(Arc::clone(&content)));
         Ok(InMemoryFile(content))
     }
+
     async fn make_temporary_file(&self) -> io::Result<PathBuf> {
         let mut path = PathBuf::from("temp");
         self.create_dir_all(&path).await?;
@@ -67,8 +74,9 @@ impl FileSystem for InMemoryFileSystem {
             }
             path.pop();
         }
-        unreachable!();
+        unreachable!()
     }
+
     async fn rename(&self, path_from: &Path, path_to: &Path) -> io::Result<()> {
         let mut files = self.files.lock().unwrap();
         match files.remove(path_from) {
@@ -79,6 +87,7 @@ impl FileSystem for InMemoryFileSystem {
             None => Err(io::ErrorKind::NotFound.into()),
         }
     }
+
     async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
         let mut files = self.files.lock().unwrap();
         let mut dir_path = PathBuf::new();
@@ -109,6 +118,7 @@ enum Node {
 
 #[derive(Clone)]
 pub struct InMemoryFile(Arc<Mutex<Cursor<Vec<u8>>>>);
+
 impl AsyncRead for InMemoryFile {
     fn poll_read(
         self: Pin<&mut Self>,
@@ -124,14 +134,17 @@ impl AsyncRead for InMemoryFile {
         Poll::Ready(Ok(()))
     }
 }
+
 impl AsyncSeek for InMemoryFile {
     fn start_seek(self: Pin<&mut Self>, position: SeekFrom) -> io::Result<()> {
         io::Seek::seek(&mut *self.0.lock().unwrap(), position).map(drop)
     }
+
     fn poll_complete(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<u64>> {
         Poll::Ready(Ok(self.0.lock().unwrap().position()))
     }
 }
+
 impl AsyncWrite for InMemoryFile {
     fn poll_write(
         self: Pin<&mut Self>,
@@ -140,9 +153,11 @@ impl AsyncWrite for InMemoryFile {
     ) -> Poll<io::Result<usize>> {
         Poll::Ready(io::Write::write(&mut *self.0.lock().unwrap(), buf))
     }
+
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(io::Write::flush(&mut *self.0.lock().unwrap()))
     }
+
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         self.poll_flush(cx)
     }

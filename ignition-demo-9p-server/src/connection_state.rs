@@ -1,11 +1,7 @@
-use ignition_9p::message::{
-    Message, MessageBody, RAttach, RError, ROpen, RRead, RStat, RVersion, RWalk, TAttach, TClunk,
-    TOpen, TRead, TStat, TVersion, TWalk,
-};
-use ignition_9p::{Fid, FileType, OpenAccess, Qid, Tag};
+use ignition_9p::{message::*, Fid, FileType, OpenAccess, Qid, Tag};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
-use std::{collections::HashMap, error::Error, fmt::Display};
 use thiserror::Error;
 
 use crate::file_system::{FileSystem, Node};
@@ -19,10 +15,12 @@ fn rerror<T: Into<String>, E>(msg: T) -> Result<MessageBody, E> {
 pub struct ConnectionState {
     inner: Arc<Mutex<InnerConnectionState>>,
 }
+
 struct InnerConnectionState {
     fs: &'static FileSystem,
     fids: HashMap<u32, FidState>,
 }
+
 impl ConnectionState {
     pub fn new(fs: &'static FileSystem) -> ConnectionState {
         ConnectionState {
@@ -281,10 +279,12 @@ impl ConnectionState {
         }
     }
 }
+
 impl InnerConnectionState {
     pub fn reset(&mut self) {
         self.fids.clear();
     }
+
     pub fn allocate_fid(&mut self, fid: Fid, node: Node<'static>) -> Result<(), AllocateFidError> {
         if !self.fids.contains_key(&fid.0) {
             self.fids.insert(fid.0, FidState::new(node));
@@ -293,6 +293,7 @@ impl InnerConnectionState {
             Err(AllocateFidError::FidAlreadyInUse { fid })
         }
     }
+
     pub fn set_fid(&mut self, fid: Fid, node: Node<'static>) {
         self.fids.insert(fid.0, FidState::new(node));
     }
@@ -311,6 +312,7 @@ struct FidState {
     node: Node<'static>,
     is_open: bool,
 }
+
 impl FidState {
     fn new(node: Node<'static>) -> FidState {
         FidState {
@@ -320,15 +322,8 @@ impl FidState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum AllocateFidError {
+    #[error("fid {} already in use", .fid.0)]
     FidAlreadyInUse { fid: Fid },
 }
-impl Display for AllocateFidError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AllocateFidError::FidAlreadyInUse { fid } => write!(f, "fid {} already in use", fid.0),
-        }
-    }
-}
-impl Error for AllocateFidError {}

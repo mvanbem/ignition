@@ -1,4 +1,4 @@
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::{BufMut, BytesMut};
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use ignition_9p::message::Message;
 use ignition_9p::wire::{ReadFrom, WriteTo};
@@ -39,7 +39,7 @@ where
     pin_mut!(framed);
     while let Some(frame) = framed.next().await {
         let frame = frame?;
-        let req = Message::read_from(&mut frame.bytes())?;
+        let req = Message::read_from(&mut &*frame)?;
         log::info!("received a request: {:?}", req);
 
         let mut buf = BytesMut::new().writer();

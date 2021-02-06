@@ -1,10 +1,12 @@
-use crate::USER_NAME;
 use ignition_9p::{FileType, Qid, Stat, StatMode, UnixTriplet};
 use std::collections::HashMap;
 use std::convert::TryInto;
 
+use crate::USER_NAME;
+
 #[derive(Clone, Copy)]
 struct FileIndex(usize);
+
 #[derive(Clone, Copy)]
 struct DirectoryIndex(usize);
 
@@ -13,19 +15,23 @@ pub struct FileSystem {
     directories: Vec<InnerDirectory>,
     files: Vec<InnerFile>,
 }
+
 impl FileSystem {
     pub fn builder() -> builder::FileSystem {
         builder::FileSystem::new()
     }
+
     pub fn root(&self) -> Directory<'_> {
         Directory {
             file_system: self,
             index: DirectoryIndex(0),
         }
     }
+
     fn file(&self, index: FileIndex) -> &InnerFile {
         &self.files[index.0]
     }
+
     fn directory(&self, index: DirectoryIndex) -> &InnerDirectory {
         &self.directories[index.0]
     }
@@ -37,6 +43,7 @@ pub enum Node<'a> {
     Directory(Directory<'a>),
     File(File<'a>),
 }
+
 impl<'a> Node<'a> {
     pub fn content(&self) -> &[u8] {
         match self {
@@ -44,18 +51,21 @@ impl<'a> Node<'a> {
             Node::File(file) => file.content(),
         }
     }
+
     pub fn cut_points(&self) -> Option<&[usize]> {
         match self {
             Node::Directory(directory) => Some(directory.cut_points()),
             Node::File(_) => None,
         }
     }
+
     pub fn qid(&self) -> Qid {
         match self {
             Node::Directory(directory) => directory.qid(),
             Node::File(file) => file.qid(),
         }
     }
+
     pub fn stat(&self) -> Stat {
         match self {
             Node::Directory(directory) => directory.stat(),
@@ -70,6 +80,7 @@ pub struct Directory<'a> {
     file_system: &'a FileSystem,
     index: DirectoryIndex,
 }
+
 impl<'a> Directory<'a> {
     fn get(&self) -> &InnerDirectory {
         &self.file_system.directory(self.index)
@@ -81,21 +92,26 @@ impl<'a> Directory<'a> {
             index: self.get().parent,
         }
     }
+
     pub fn content(&self) -> &[u8] {
         &self.get().content
     }
+
     pub fn cut_points(&self) -> &[usize] {
         &self.get().cut_points
     }
+
     pub fn entry(&self, name: &str) -> Option<Node<'a>> {
         self.get()
             .entries
             .get(name)
             .map(|x| x.to_node(self.file_system))
     }
+
     pub fn qid(&self) -> Qid {
         self.get().qid()
     }
+
     pub fn stat(&self) -> Stat {
         self.get().stat()
     }
@@ -107,6 +123,7 @@ pub struct File<'a> {
     file_system: &'a FileSystem,
     index: FileIndex,
 }
+
 impl<'a> File<'a> {
     fn get(&self) -> &InnerFile {
         self.file_system.file(self.index)
@@ -115,9 +132,11 @@ impl<'a> File<'a> {
     pub fn content(&self) -> &[u8] {
         &self.get().content
     }
+
     pub fn qid(&self) -> Qid {
         self.get().qid()
     }
+
     pub fn stat(&self) -> Stat {
         self.get().stat()
     }
@@ -128,6 +147,7 @@ enum InnerNode {
     Directory(DirectoryIndex),
     File(FileIndex),
 }
+
 impl InnerNode {
     fn to_node<'a>(self, file_system: &'a FileSystem) -> Node<'a> {
         match self {
@@ -145,6 +165,7 @@ struct InnerDirectory {
     entries: HashMap<String, InnerNode>,
     qid_path: u64,
 }
+
 impl InnerDirectory {
     fn qid(&self) -> Qid {
         Qid {
@@ -153,6 +174,7 @@ impl InnerDirectory {
             path: self.qid_path,
         }
     }
+
     fn stat(&self) -> Stat {
         let qid = self.qid();
         Stat {
@@ -180,6 +202,7 @@ struct InnerFile {
     content: Vec<u8>,
     qid_path: u64,
 }
+
 impl InnerFile {
     pub fn qid(&self) -> Qid {
         Qid {
@@ -188,6 +211,7 @@ impl InnerFile {
             path: self.qid_path,
         }
     }
+
     pub fn stat(&self) -> Stat {
         let qid = self.qid();
         Stat {
@@ -211,16 +235,18 @@ impl InnerFile {
 }
 
 pub mod builder {
-    use super::{DirectoryIndex, FileIndex};
     use ignition_9p::wire::WriteTo;
     use std::collections::HashMap;
     use thiserror::Error;
+
+    use super::{DirectoryIndex, FileIndex};
 
     /// A file system builder.
     pub struct FileSystem {
         directories: Vec<InnerDirectory>,
         files: Vec<InnerFile>,
     }
+
     impl FileSystem {
         pub fn new() -> FileSystem {
             FileSystem {
@@ -232,12 +258,14 @@ pub mod builder {
                 files: vec![],
             }
         }
+
         pub fn root(&mut self) -> Directory<'_> {
             Directory {
                 file_system: self,
                 index: DirectoryIndex(0),
             }
         }
+
         pub fn build(mut self) -> super::FileSystem {
             let mut qid_path_factory = QidPathFactory { next_qid_path: 0 };
             let mut fs = super::FileSystem {
@@ -279,14 +307,17 @@ pub mod builder {
             self.files.push(file);
             index
         }
+
         fn push_directory(&mut self, directory: InnerDirectory) -> DirectoryIndex {
             let index = DirectoryIndex(self.directories.len());
             self.directories.push(directory);
             index
         }
+
         fn file(&mut self, index: FileIndex) -> &mut InnerFile {
             &mut self.files[index.0]
         }
+
         fn directory(&mut self, index: DirectoryIndex) -> &mut InnerDirectory {
             &mut self.directories[index.0]
         }
@@ -297,10 +328,12 @@ pub mod builder {
         file_system: &'a mut FileSystem,
         index: FileIndex,
     }
+
     impl<'a> File<'a> {
         fn get(&mut self) -> &mut InnerFile {
             self.file_system.file(self.index)
         }
+
         pub fn set_content(&mut self, content: Vec<u8>) {
             self.get().content = content;
         }
@@ -311,10 +344,12 @@ pub mod builder {
         file_system: &'a mut FileSystem,
         index: DirectoryIndex,
     }
+
     impl<'a> Directory<'a> {
         fn get(&mut self) -> &mut InnerDirectory {
             self.file_system.directory(self.index)
         }
+
         pub fn new_directory<'b>(
             &'b mut self,
             name: &str,
@@ -337,6 +372,7 @@ pub mod builder {
                 index: new_directory_index,
             })
         }
+
         pub fn new_file<'b>(&'b mut self, name: &str) -> Result<File<'b>, NewFileError> {
             if self.get().entries.contains_key(name) {
                 return Err(NewFileError::AlreadyExists {
@@ -360,6 +396,7 @@ pub mod builder {
     struct QidPathFactory {
         next_qid_path: u64,
     }
+
     impl QidPathFactory {
         fn next(&mut self) -> u64 {
             let result = self.next_qid_path;
@@ -372,6 +409,7 @@ pub mod builder {
         Directory(DirectoryIndex),
         File(FileIndex),
     }
+
     impl InnerNode {
         fn build(self) -> super::InnerNode {
             match self {
@@ -385,6 +423,7 @@ pub mod builder {
         name: String,
         content: Vec<u8>,
     }
+
     impl InnerFile {
         fn build(self, qid_path_factory: &mut QidPathFactory) -> super::InnerFile {
             super::InnerFile {
@@ -400,6 +439,7 @@ pub mod builder {
         name: String,
         entries: HashMap<String, InnerNode>,
     }
+
     impl InnerDirectory {
         fn build(mut self, qid_path_factory: &mut QidPathFactory) -> super::InnerDirectory {
             super::InnerDirectory {

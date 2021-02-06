@@ -9,7 +9,7 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1"
-bytes = "0.6"
+bytes = "1"
 clap = "2"
 futures-util = { version = "0.3", features = ["sink"] }
 ignition-9p = { path = "../ignition-9p" }
@@ -18,8 +18,8 @@ log = "0.4"
 pin-utils = "0.1"
 simple_logger = "1"
 thiserror = "1"
-tokio-util = { version = "0.5", features = ["codec"] }
+tokio-util = { version = "0.6", features = ["codec"] }
 
 [dependencies.tokio]
-version = "0.3"
+version = "1"
 features = ["macros", "net", "rt-multi-thread", "sync"]
