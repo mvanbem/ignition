@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 function build_linux {
     rm -rf packages/linux-5.10.13
@@ -31,22 +32,39 @@ function build_initramfs {
         && find . | cpio -o -c | gzip -9 > ../initramfs.cpio.gz)
 }
 
+function build_gcc {
+    rm -rf packages/{gcc-10.2.0,gmp-6.2.1,mpfr-4.1.0,mpc-1.2.1}
+    rm -rf build/gcc
+    (cd packages \
+        && tar xf gcc-10.2.0.tar.xz \
+        && tar xf gmp-6.2.1.tar.xz \
+        && tar xf mpfr-4.1.0.tar.xz \
+        && tar xf mpc-1.2.1.tar.gz)
+    (cd packages/gcc-10.2.0 \
+        && mv ../gmp-6.2.1 gmp \
+        && mv ../mpfr-4.1.0 mpfr \
+        && mv ../mpc-1.2.1 mpc)
+    mkdir -p build/gcc
+    (cd build/gcc \
+        && ../../packages/gcc-10.2.0/configure \
+            --prefix=/usr \
+            --disable-multilib \
+            --enable-languages=c \
+        && make -j4)
+}
+
 case $1 in
-linux)
-    build_linux
-    ;;
-busybox)
-    build_busybox
-    ;;
-initramfs)
-    build_initramfs
-    ;;
+linux) build_linux;;
+busybox) build_busybox;;
+initramfs) build_initramfs;;
+gcc) build_gcc;;
 all|"")
     build_linux
     build_busybox
     build_initramfs
+    build_gcc
     ;;
 *)
-    echo "unexpected argument: `$1`" >&2
+    echo "unexpected argument: \`$1\`" >&2
     exit 1
 esac

@@ -1,2 +1,6 @@
 d568681c91a85edc6710770cebc1e80e042ad74d305b5c2e6d57a5f3de3b8fbd  packages/busybox-1.33.0.tar.bz2
+b8dd4368bb9c7f0b98188317ee0254dd8cc99d1e3a18d0ff146c855fe16c1d8c  packages/gcc-10.2.0.tar.xz
+fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2  packages/gmp-6.2.1.tar.xz
 06698c0ce35ceefa9b79ceb108ec7fb86de05f51fe615f3ae5cc82e293dfe1f2  packages/linux-5.10.13.tar.xz
+17503d2c395dfcf106b622dc142683c1199431d095367c6aacba6eec30340459  packages/mpc-1.2.1.tar.gz
+0c98a3f1732ff6ca4ea690552079da9c597872d30e96ec28414ee23c95558a7f  packages/mpfr-4.1.0.tar.xz

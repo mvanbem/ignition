@@ -7,5 +7,10 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.watcherExclude": {
+			"**/vm-bootstrap/build/**": true,
+			"**/vm-bootstrap/packages/**": true,
+		}
+	}
 }
