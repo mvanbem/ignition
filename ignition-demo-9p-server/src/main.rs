@@ -13,7 +13,7 @@ mod serve;
 const MAX_MSIZE: u32 = 1048576;
 
 /// User name set for all owner, group, and last-modifier fields.
-const USER_NAME: &'static str = "root";
+const USER_NAME: &str = "root";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

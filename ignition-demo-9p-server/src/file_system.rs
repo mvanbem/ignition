@@ -149,7 +149,7 @@ enum InnerNode {
 }
 
 impl InnerNode {
-    fn to_node<'a>(self, file_system: &'a FileSystem) -> Node<'a> {
+    fn to_node(self, file_system: &FileSystem) -> Node<'_> {
         match self {
             InnerNode::File(index) => Node::File(File { file_system, index }),
             InnerNode::Directory(index) => Node::Directory(Directory { file_system, index }),

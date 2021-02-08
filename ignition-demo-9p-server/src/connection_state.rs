@@ -1,4 +1,5 @@
 use ignition_9p::{message::*, Fid, FileType, OpenAccess, Qid, Tag};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
@@ -6,7 +7,7 @@ use thiserror::Error;
 
 use crate::file_system::{FileSystem, Node};
 
-const SUPPORTED_VERSION: &'static str = "9P2000";
+const SUPPORTED_VERSION: &str = "9P2000";
 
 fn rerror<T: Into<String>, E>(msg: T) -> Result<MessageBody, E> {
     Ok(MessageBody::RError(RError { ename: msg.into() }))
@@ -61,7 +62,7 @@ impl ConnectionState {
                 uname: _,
                 ref aname,
             }) => {
-                if aname != "" {
+                if !aname.is_empty() {
                     return rerror("not found");
                 }
                 let mut inner = self.inner.lock().unwrap();
@@ -88,13 +89,11 @@ impl ConnectionState {
             }) => {
                 let mut state = self.inner.lock().unwrap();
                 let mut node = match state.fids.get(&fid.0) {
-                    Some(fid_state) => fid_state.node.clone(),
+                    Some(fid_state) => fid_state.node,
                     None => return rerror("fid not in use"),
                 };
-                if newfid != fid {
-                    if let Some(_) = state.fids.get(&newfid.0) {
-                        return rerror("fid already in use");
-                    }
+                if newfid != fid && state.fids.get(&newfid.0).is_some() {
+                    return rerror("fid already in use");
                 }
 
                 let mut qids = vec![];
@@ -215,9 +214,10 @@ impl ConnectionState {
                             match new_end.checked_sub(offset) {
                                 Some(adjusted_count) => adjusted_count,
                                 None => {
-                                    return Err(HandleRequestError::ProtocolError(format!(
+                                    return Err(HandleRequestError::ProtocolError(
                                         "directory read originated between stat entries"
-                                    )));
+                                            .to_string(),
+                                    ));
                                 }
                             }
                         }
@@ -286,11 +286,12 @@ impl InnerConnectionState {
     }
 
     pub fn allocate_fid(&mut self, fid: Fid, node: Node<'static>) -> Result<(), AllocateFidError> {
-        if !self.fids.contains_key(&fid.0) {
-            self.fids.insert(fid.0, FidState::new(node));
-            Ok(())
-        } else {
-            Err(AllocateFidError::FidAlreadyInUse { fid })
+        match self.fids.entry(fid.0) {
+            Entry::Vacant(entry) => {
+                entry.insert(FidState::new(node));
+                Ok(())
+            }
+            Entry::Occupied(_) => Err(AllocateFidError::FidAlreadyInUse { fid }),
         }
     }
 

@@ -202,7 +202,7 @@ fn parse_field_attrs(attrs: &[Attribute]) -> FieldAttrs {
 fn path_is_ident(path: &Path, expected: &str) -> bool {
     match path.get_ident() {
         Some(ident) => ident == expected,
-        None => return false,
+        None => false,
     }
 }
 

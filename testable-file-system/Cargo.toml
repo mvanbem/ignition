@@ -10,4 +10,7 @@ edition = "2018"
 async-trait = "0.1"
 hex = "0.4"
 rand = "0.8"
-tokio = "1"
+
+[dependencies.tokio]
+version = "1"
+features = ["fs", "io-util"]

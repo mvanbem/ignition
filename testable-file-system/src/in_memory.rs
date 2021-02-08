@@ -36,6 +36,12 @@ impl InMemoryFileSystem {
     }
 }
 
+impl Default for InMemoryFileSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl FileSystem for InMemoryFileSystem {
     type File = InMemoryFile;
