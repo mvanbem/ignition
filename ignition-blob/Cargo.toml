@@ -9,16 +9,22 @@ license = "MIT"
 
 [dependencies]
 async-trait = "0.1"
+blake3 = "0.3"
 bytes = "1"
+futures-util = "0.3"
 hex = "0.4"
 http = "0.2"
 hyper = "0.14"
+ignition-blob-proto = { path = "../ignition-blob-proto" }
 log = "0.4"
+prost = "0.7"
 rand = "0.8"
-sha2 = "0.9"
 simple_logger = "1"
-warp = "0.3"
+testable-file-system = { path = "../testable-file-system" }
+thiserror = "1"
+tokio-stream = "0.1"
+tonic = "0.4"
 
 [dependencies.tokio]
 version = "1"
-features = ["fs", "io-util", "macros", "net", "rt", "rt-multi-thread"]
+features = ["fs", "io-util", "macros", "net", "rt-multi-thread"]

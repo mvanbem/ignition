@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite, ReadBuf};
 
-use crate::file_system::FileSystem;
+use crate::FileSystem;
 
 #[derive(Clone)]
 pub struct InMemoryFileSystem {
@@ -41,7 +41,6 @@ impl FileSystem for InMemoryFileSystem {
     type File = InMemoryFile;
 
     async fn open(&self, path: &Path) -> io::Result<Self::File> {
-        eprintln!("open({:?})", path);
         match self.files.lock().unwrap().get(path) {
             Some(Node::Directory) => panic!("opening directories not implemented"),
             Some(Node::File(ref content)) => Ok(InMemoryFile(Arc::clone(content))),

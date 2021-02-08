@@ -4,15 +4,15 @@ use std::io;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 
-use crate::file_system::FileSystem;
+use crate::FileSystem;
 
 #[derive(Clone, Copy)]
-pub struct TokioFileSystem {
+pub struct RealFileSystem {
     _private: (),
 }
 
 #[async_trait]
-impl FileSystem for TokioFileSystem {
+impl FileSystem for RealFileSystem {
     type File = tokio::fs::File;
 
     async fn open(&self, path: &Path) -> io::Result<Self::File> {
@@ -50,6 +50,6 @@ impl FileSystem for TokioFileSystem {
     }
 }
 
-pub fn tokio_file_system() -> TokioFileSystem {
-    TokioFileSystem { _private: () }
+pub fn real_file_system() -> RealFileSystem {
+    RealFileSystem { _private: () }
 }

@@ -1,346 +1,196 @@
-use sha2::{Digest, Sha256};
-use std::fmt::{self, Display, Formatter};
-use std::io::{self, Read, SeekFrom};
+use ignition_blob_proto::blob_pb;
+use std::convert::TryInto;
+use std::io::{self, SeekFrom};
 use std::path::PathBuf;
-use std::str::FromStr;
+use testable_file_system::{real_file_system, FileSystem};
+use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
-use warp::Filter;
-
-use crate::file_system::{tokio::tokio_file_system, FileSystem};
-
-mod file_system;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tonic::{Request, Response, Status, Streaming};
 
 #[cfg(test)]
-mod filter_tests;
+mod service_tests;
+
+const DEFAULT_MAX_CHUNK_SIZE: usize = 1048576;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
 
-    warp::serve(filter(tokio_file_system()))
-        .run(([127, 0, 0, 1], 3030))
-        .await;
+    let addr = "[::1]:3030".parse()?;
+
+    tonic::transport::Server::builder()
+        .add_service(blob_pb::blob_service_server::BlobServiceServer::new(
+            BlobServiceImpl {
+                file_system: real_file_system(),
+            },
+        ))
+        .serve(addr)
+        .await?;
+
+    Ok(())
 }
 
-fn filter<F>(file_system: F) -> impl Filter<Extract = impl warp::Reply> + Clone
-where
-    F: FileSystem + 'static,
-{
-    let specific_blob = warp::path!(BlobId)
-        .and(warp::get())
-        .and(with_file_system::<F>(file_system.clone()))
-        .and_then(get_blob::<F>);
-
-    let blob_collection = warp::path::end()
-        .and(warp::post())
-        .and(warp::filters::body::aggregate())
-        .and(with_file_system::<F>(file_system.clone()))
-        .and_then(post_blob::<_, F>);
-
-    warp::path("blobs").and(specific_blob.or(blob_collection))
+fn unexpected_io_error(e: impl std::error::Error) -> Status {
+    log::error!("unexpected I/O error: {}", e);
+    Status::internal(&format!("unexpected I/O error: {}", e))
 }
 
-fn with_file_system<F>(
+struct BlobServiceImpl<F: FileSystem> {
     file_system: F,
-) -> impl Filter<Extract = (F,), Error = std::convert::Infallible> + Clone
-where
-    F: FileSystem + 'static,
-{
-    warp::any().map(move || file_system.clone())
 }
 
-async fn get_blob<F>(id: BlobId, file_system: F) -> Result<impl warp::Reply, warp::Rejection>
-where
-    F: FileSystem + 'static,
-{
-    let path = path_for_id(&id);
-    let mut file = match file_system.open(&path).await {
-        Ok(file) => file,
-        Err(e) => match e.kind() {
-            io::ErrorKind::NotFound => return Err(warp::reject::not_found()),
-            _ => return Err(internal_server_error()),
-        },
-    };
+#[tonic::async_trait]
+impl<F: FileSystem + 'static> blob_pb::blob_service_server::BlobService for BlobServiceImpl<F> {
+    type GetStream = ReceiverStream<Result<blob_pb::GetResponse, Status>>;
 
-    // ASSUMPTION: The file will not change size between observing the
-    // length and reading its content. This is reasonable if no other
-    // process is interfering with this server's data directory.
-    let len = file
-        .seek(SeekFrom::End(0))
-        .await
-        .map_err(|_| internal_server_error())?;
-    file.seek(SeekFrom::Start(0))
-        .await
-        .map_err(|_| internal_server_error())?;
+    async fn get(
+        &self,
+        request: Request<blob_pb::GetRequest>,
+    ) -> Result<Response<Self::GetStream>, Status> {
+        let id = request
+            .get_ref()
+            .id
+            .as_ref()
+            .ok_or_else(|| Status::invalid_argument("id field was unset"))?;
 
-    let (mut sender, body) = hyper::Body::channel();
-    tokio::spawn(async move {
-        // TODO: tune buffer size
-        let mut buf = [0; 4096];
-        loop {
-            let n = file.read(&mut buf[..]).await.unwrap();
-            if n == 0 {
-                break;
-            }
-            sender
-                .send_data(hyper::body::Bytes::copy_from_slice(&buf[..n]))
+        let path = path_for_id(&id).map_err(|PathForIdError::UnknownHashAlgorithm| {
+            Status::invalid_argument("unknown hash algorithm")
+        })?;
+
+        let mut file = self
+            .file_system
+            .open(&path)
+            .await
+            .map_err(|e| match e.kind() {
+                io::ErrorKind::NotFound => Status::not_found("blob not found"),
+                _ => unexpected_io_error(e),
+            })?;
+
+        // ASSUMPTION: The file will not change size between observing the
+        // length and reading its content. This is reasonable if no other
+        // process is interfering with this server's data directory.
+        let len = file
+            .seek(SeekFrom::End(0))
+            .await
+            .map_err(unexpected_io_error)?;
+        file.seek(SeekFrom::Start(0))
+            .await
+            .map_err(unexpected_io_error)?;
+
+        // Spawn a task to stream data to the client.
+        let (tx, rx) = mpsc::channel(1);
+        tokio::spawn(async move {
+            // The first response just indicates the overall length.
+            tx.send(Ok(blob_pb::GetResponse {
+                total_byte_length: len,
+                data: vec![],
+            }))
+            .await
+            .unwrap();
+
+            // Send a response for each data chunk.
+            let max_chunk_size = match request.get_ref().max_chunk_size {
+                0 => DEFAULT_MAX_CHUNK_SIZE,
+                x => x.try_into().unwrap(),
+            };
+            let mut buf = vec![0; max_chunk_size];
+            loop {
+                let n = file.read(&mut buf[..]).await.unwrap();
+                if n == 0 {
+                    break;
+                }
+
+                tx.send(Ok(blob_pb::GetResponse {
+                    total_byte_length: 0,
+                    data: buf[..n].to_vec(),
+                }))
                 .await
                 .unwrap();
-        }
-    });
-
-    Ok(http::Response::builder()
-        .status(200)
-        .header("Content-Length", len)
-        .body(body)
-        .unwrap())
-}
-
-struct WarpBufReader<T: warp::Buf> {
-    buf: T,
-}
-
-impl<T: warp::Buf> WarpBufReader<T> {
-    fn new(buf: T) -> WarpBufReader<T> {
-        WarpBufReader { buf }
-    }
-}
-
-impl<T: warp::Buf> Read for WarpBufReader<T> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let len = std::cmp::min(self.buf.remaining(), buf.len());
-        warp::Buf::copy_to_slice(&mut self.buf, &mut buf[0..len]);
-        Ok(len)
-    }
-}
-
-async fn post_blob<B, F>(body: B, file_system: F) -> Result<impl warp::Reply, warp::Rejection>
-where
-    B: warp::Buf,
-    F: FileSystem + 'static,
-{
-    // Allocate a temporary file and get its path.
-    let temp_path = {
-        file_system.make_temporary_file().await.map_err(|e| {
-            log::error!("unexpected error making temporary file: {}", e);
-            internal_server_error()
-        })?
-    };
-
-    // Open the temporary file for use as a streaming destination.
-    let mut temp_file = {
-        file_system.create(&temp_path).await.map_err(|e| {
-            log::error!(
-                "unexpected error opening temporary file {:?}: {}",
-                temp_path,
-                e,
-            );
-            internal_server_error()
-        })?
-    };
-
-    // Stream the request body both to a hasher and to the temporary
-    // file.
-    let mut body = WarpBufReader::new(body);
-    let mut hasher = Sha256::new();
-    // TODO: tune buffer size
-    let mut buf = [0; 4096];
-    loop {
-        let n = body.read(&mut buf[..]).map_err(|e| {
-            log::error!("unexpected error reading request body: {}", e);
-            internal_server_error()
-        })?;
-        if n == 0 {
-            // Successful EOF.
-            break;
-        }
-        let buf = &buf[..n];
-        hasher.update(buf);
-        temp_file.write_all(&buf).await.map_err(|e| {
-            log::error!("unexpected error writing temporary file: {}", e);
-            internal_server_error()
-        })?;
-    }
-
-    // Finalize the hash and construct the destination path.
-    let id = BlobId {
-        algorithm: HashAlgorithm::Sha256,
-        hash: hasher.finalize().to_vec().into_boxed_slice(),
-    };
-    let dest_path = path_for_id(&id);
-
-    // Flush and close the temporary file. A successful call to
-    // flush() ensures the file will be closed immediately when it's
-    // dropped.
-    temp_file.flush().await.map_err(|e| {
-        log::error!("unexpected error flushing temporary file: {}", e);
-        internal_server_error()
-    })?;
-    drop(temp_file);
-
-    // Rename the temporary file into its destination.
-    let parent_dir = dest_path.parent().unwrap();
-    file_system.create_dir_all(parent_dir).await.map_err(|e| {
-        log::error!(
-            "unexpected error creating destination directory {:?}: {}",
-            parent_dir,
-            e,
-        );
-        internal_server_error()
-    })?;
-    file_system
-        .rename(&temp_path, &dest_path)
-        .await
-        .map_err(|e| {
-            log::error!(
-                "unexpected error renaming temporary file from {:?} to {:?}: {}",
-                temp_path,
-                dest_path,
-                e,
-            );
-            internal_server_error()
-        })?;
-
-    Ok(http::Response::builder()
-        .status(200)
-        .body(id.to_string())
-        .unwrap())
-}
-
-#[derive(Debug)]
-struct InternalServerError;
-
-impl warp::reject::Reject for InternalServerError {}
-
-fn internal_server_error() -> warp::reject::Rejection {
-    warp::reject::custom(InternalServerError)
-}
-
-#[derive(Debug, Eq, PartialEq)]
-struct BlobId {
-    algorithm: HashAlgorithm,
-    hash: Box<[u8]>,
-}
-
-impl FromStr for BlobId {
-    type Err = ();
-    fn from_str(s: &str) -> Result<BlobId, ()> {
-        let mut parts = s.splitn(2, ':');
-        let algorithm = HashAlgorithm::parse(parts.next().ok_or(())?).ok_or(())?;
-        let mut hash = Box::new([0; 32]);
-        hex::decode_to_slice(parts.next().ok_or(())?, &mut *hash).map_err(|_| ())?;
-        Ok(BlobId { algorithm, hash })
-    }
-}
-
-impl Display for BlobId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", self.algorithm)?;
-        let mut hash_hex = [0; 64];
-        hex::encode_to_slice(&*self.hash, &mut hash_hex[..]).unwrap();
-        let hash_hex = std::str::from_utf8(&hash_hex[..]).unwrap();
-        write!(f, "{}", hash_hex)
-    }
-}
-
-#[cfg(test)]
-mod blob_id_tests {
-    use super::{BlobId, HashAlgorithm};
-
-    #[test]
-    fn from_str_success() {
-        assert_eq!(
-            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".parse(),
-            Ok(BlobId {
-                algorithm: HashAlgorithm::Sha256,
-                hash: vec![
-                    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89,
-                    0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23,
-                    0x45, 0x67, 0x89, 0xab, 0xcd, 0xef
-                ]
-                .into_boxed_slice(),
-            }),
-        );
-    }
-
-    #[test]
-    fn from_str_bad_algorithm() {
-        assert_eq!(
-            "md5:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-                .parse::<BlobId>(),
-            Err(()),
-        );
-    }
-
-    #[test]
-    fn from_str_hash_too_long() {
-        assert_eq!(
-            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
-                .parse::<BlobId>(),
-            Err(()),
-        );
-    }
-
-    #[test]
-    fn from_str_hash_too_short() {
-        assert_eq!(
-            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde"
-                .parse::<BlobId>(),
-            Err(()),
-        );
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum HashAlgorithm {
-    Sha256,
-}
-
-impl HashAlgorithm {
-    fn parse(text: &str) -> Option<HashAlgorithm> {
-        match text {
-            "sha256" => Some(HashAlgorithm::Sha256),
-            _ => None,
-        }
-    }
-}
-
-impl Display for HashAlgorithm {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}:",
-            match self {
-                HashAlgorithm::Sha256 => "sha256",
             }
-        )
+        });
+
+        Ok(Response::new(ReceiverStream::new(rx)))
+    }
+
+    async fn put(
+        &self,
+        mut request: Request<Streaming<blob_pb::PutRequest>>,
+    ) -> Result<Response<blob_pb::PutResponse>, Status> {
+        // Allocate a temporary file and get its path.
+        let temp_path = self
+            .file_system
+            .make_temporary_file()
+            .await
+            .map_err(unexpected_io_error)?;
+
+        // Open the temporary file for use as a streaming destination.
+        let mut temp_file = self
+            .file_system
+            .create(&temp_path)
+            .await
+            .map_err(unexpected_io_error)?;
+
+        // Stream the request body to both a hasher and the temporary file.
+        let mut hasher = blake3::Hasher::new();
+        while let Some(request) = request.get_mut().message().await? {
+            hasher.update(&*request.data);
+            temp_file
+                .write_all(&*request.data)
+                .await
+                .map_err(unexpected_io_error)?;
+        }
+
+        // Finalize the hash and construct the destination path.
+        let id = blob_pb::BlobId {
+            algorithm: blob_pb::HashAlgorithm::Blake3 as i32,
+            hash: hasher.finalize().as_bytes().to_vec(),
+        };
+        let dest_path = path_for_id(&id).unwrap();
+
+        // Flush and close the temporary file. A successful call to flush() ensures the file will be
+        // closed immediately when it's dropped.
+        temp_file.flush().await.map_err(unexpected_io_error)?;
+        drop(temp_file);
+
+        // Rename the temporary file into its destination.
+        let parent_dir = dest_path.parent().unwrap();
+        self.file_system
+            .create_dir_all(parent_dir)
+            .await
+            .map_err(unexpected_io_error)?;
+        self.file_system
+            .rename(&temp_path, &dest_path)
+            .await
+            .map_err(unexpected_io_error)?;
+
+        Ok(Response::new(blob_pb::PutResponse { id: Some(id) }))
     }
 }
 
-#[cfg(test)]
-mod hash_algorithm_tests {
-    use super::HashAlgorithm;
-
-    #[test]
-    fn parse() {
-        assert_eq!(HashAlgorithm::parse("sha256"), Some(HashAlgorithm::Sha256));
-    }
+#[derive(Debug, Error)]
+enum PathForIdError {
+    #[error("unknown hash algorithm")]
+    UnknownHashAlgorithm,
 }
 
-fn path_for_id(id: &BlobId) -> PathBuf {
-    match id.algorithm {
-        HashAlgorithm::Sha256 => {
+fn path_for_id(id: &blob_pb::BlobId) -> Result<PathBuf, PathForIdError> {
+    match id.algorithm() {
+        blob_pb::HashAlgorithm::Unknown => Err(PathForIdError::UnknownHashAlgorithm),
+
+        blob_pb::HashAlgorithm::Blake3 => {
             assert_eq!(id.hash.len(), 32);
             let mut hash_hex = [0; 64];
             hex::encode_to_slice(&id.hash[..], &mut hash_hex[..]).unwrap();
             let hash_hex_str = std::str::from_utf8(&hash_hex[..]).unwrap();
-            let mut path = PathBuf::from("data/sha256");
+            let mut path = PathBuf::from("data/blake3");
             path.push(&hash_hex_str[..2]);
             path.push(&hash_hex_str[2..]);
-            path
+            Ok(path)
         }
     }
 }

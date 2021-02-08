@@ -4,5 +4,7 @@ members = [
     "ignition-9p-wire",
     "ignition-9p-wire-derive",
     "ignition-blob",
+    "ignition-blob-proto",
     "ignition-demo-9p-server",
+    "testable-file-system",
 ]

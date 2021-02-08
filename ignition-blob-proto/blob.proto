@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package ignition.blob;
+
+enum HashAlgorithm {
+    UNKNOWN = 0;
+    BLAKE3 = 1;
+}
+
+message BlobId {
+    HashAlgorithm algorithm = 1;
+    bytes hash = 2;
+}
+
+service BlobService {
+    rpc Put (stream PutRequest) returns (PutResponse);
+    rpc Get (GetRequest) returns (stream GetResponse);
+}
+
+message PutRequest {
+    bytes data = 1;
+}
+
+message PutResponse {
+    BlobId id = 1;
+}
+
+message GetRequest {
+    BlobId id = 1;
+
+    // If nonzero, sets an upper bound on the size of `GetResponse.data` in each response message.
+    uint64 max_chunk_size = 2;
+}
+
+message GetResponse {
+    // Only set on the first response.
+    uint64 total_byte_length = 1;
+
+    // Set on every response.
+    bytes data = 2;
+}
