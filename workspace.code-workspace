@@ -6,6 +6,7 @@
 	],
 	"settings": {
 		"files.watcherExclude": {
+			"**/target/**": true,
 			"**/vm-bootstrap/build/**": true,
 			"**/vm-bootstrap/packages/**": true,
 		}
