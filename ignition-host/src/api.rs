@@ -1,13 +1,20 @@
 use std::str::from_utf8;
+use std::time::Duration;
 
 use chrono::{SecondsFormat, Utc};
 use wasmtime::{Caller, Extern, Trap};
+
+use crate::{State, TaskId};
+
+pub fn shutdown(mut caller: Caller<'_, State>) {
+    caller.data_mut().shutdown();
+}
 
 pub fn abort() -> Result<(), Trap> {
     Err(Trap::new("aborted"))
 }
 
-pub fn log(mut caller: Caller<'_, ()>, ptr: u32, len: u32) -> Result<(), Trap> {
+pub fn log(mut caller: Caller<'_, State>, ptr: u32, len: u32) -> Result<(), Trap> {
     let memory = match caller.get_export("memory") {
         Some(Extern::Memory(memory)) => memory,
         _ => return Err(Trap::new("failed to find memory")),
@@ -27,4 +34,15 @@ pub fn log(mut caller: Caller<'_, ()>, ptr: u32, len: u32) -> Result<(), Trap> {
     );
 
     Ok(())
+}
+
+pub fn sleep(mut caller: Caller<'_, State>, task_id: u32, usec: u32) {
+    let task_id = TaskId(task_id);
+    let duration = Duration::from_micros(usec.into());
+
+    let wake_queue_sender = caller.data_mut().wake_queue_sender().clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(duration).await;
+        wake_queue_sender.send(task_id).await.unwrap();
+    });
 }

@@ -3,6 +3,7 @@ members = [
     "ignition-9p",
     "ignition-9p-wire",
     "ignition-9p-wire-derive",
+    "ignition-api",
     "ignition-blob",
     "ignition-blob-proto",
     "ignition-demo-9p-server",
