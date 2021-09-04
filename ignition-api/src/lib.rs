@@ -2,11 +2,9 @@
 
 extern crate alloc;
 
-use alloc::sync::Arc;
 use core::ffi::c_void;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::task::{Context, Poll};
 use core::time::Duration;
 
@@ -36,24 +34,27 @@ pub fn log(message: &str) {
 
 pub fn sleep(duration: Duration) -> impl Future<Output = ()> {
     let task_id = sync::sleep(duration);
-    let done_flag = Arc::default();
-    reactor::register_done_flag(task_id, Arc::clone(&done_flag));
-    TimerFuture { task_id, done_flag }
+    TimerFuture { task_id }
 }
 
 struct TimerFuture {
     task_id: TaskId,
-    done_flag: Arc<AtomicBool>,
+}
+
+impl Drop for TimerFuture {
+    fn drop(&mut self) {
+        reactor::future_dropped(self.task_id);
+    }
 }
 
 impl Future for TimerFuture {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<()> {
-        if self.done_flag.load(Ordering::SeqCst) {
+        if reactor::wake_has_happened(self.task_id) {
             Poll::Ready(())
         } else {
-            reactor::register_waker(self.task_id, cx.waker().clone());
+            reactor::store_waker(self.task_id, cx.waker().clone());
             Poll::Pending
         }
     }

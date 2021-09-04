@@ -9,6 +9,10 @@ impl TaskId {
     pub fn new(task_id: u32) -> Self {
         Self(task_id)
     }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 impl From<sys::TaskId> for TaskId {

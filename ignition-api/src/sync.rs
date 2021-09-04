@@ -9,7 +9,7 @@ use crate::sys::{self, Microseconds};
 use crate::TaskId;
 
 pub fn sleep(duration: Duration) -> TaskId {
-    let task_id = reactor::alloc_task_id();
+    let task_id = reactor::new_task();
     let duration = Microseconds::try_from(duration).unwrap();
 
     // SAFETY: No special considerations.
