@@ -26,14 +26,11 @@ async fn main() -> anyhow::Result<()> {
     let wake = instance.get_typed_func::<u32, (), _>(&mut store, "wake")?;
 
     // Make the initial call.
-    println!("initial call to wake()");
     wake.call(&mut store, !0)?;
-    println!("initial wake() returned");
 
     // Dispatch wake events.
     while !store.data().is_shutdown() {
         let task_id = wake_queue_receiver.recv().await.unwrap();
-        println!("calling wake() for task_id {}", task_id.0);
         wake.call(&mut store, task_id.0)?;
     }
 

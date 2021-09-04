@@ -6,6 +6,9 @@ extern crate alloc;
 use core::panic::PanicInfo;
 use core::time::Duration;
 
+use alloc::vec::Vec;
+use futures::prelude::stream::StreamExt;
+use futures::stream::FuturesUnordered;
 use ignition_api::{abort, emit_wake, executor, log, shutdown, sleep};
 use wee_alloc::WeeAlloc;
 
@@ -20,11 +23,15 @@ fn handle_panic(_: &PanicInfo) -> ! {
 emit_wake!(init);
 
 fn init() {
-    log("Waiting one second");
-    executor::spawn(async {
-        sleep(Duration::from_secs(1)).await;
-        log("Woke up");
+    log("Allocating timers...");
+    let mut timers = Vec::new();
+    for _ in 0..100_000 {
+        timers.push(sleep(Duration::ZERO));
+    }
+    executor::spawn(async move {
+        let mut f: FuturesUnordered<_> = timers.into_iter().collect();
+        while let Some(_) = f.next().await {}
+        log("All timers have elapsed");
         shutdown();
-        log("Requested shutdown");
     });
 }

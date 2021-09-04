@@ -50,6 +50,12 @@ struct TaskState {
     future_is_dropped: bool,
 }
 
+impl TaskState {
+    fn ready_to_drop(&self) -> bool {
+        self.wake_has_happened && self.future_is_dropped
+    }
+}
+
 impl Reactor {
     pub fn new_task(&mut self) -> TaskId {
         if let Some(task_id) = self.first_free_task_id {
@@ -83,13 +89,19 @@ impl Reactor {
         };
         task_state.future_is_dropped = true;
 
-        if task_state.wake_has_happened && task_state.future_is_dropped {
-            // Overwrite this node and push it onto the free list.
-            self.nodes[task_id.as_usize()] = Node::Free {
-                next_free_task_id: self.first_free_task_id,
-            };
-            self.first_free_task_id = Some(task_id);
+        if task_state.ready_to_drop() {
+            self.drop_task_state(task_id);
         }
+    }
+
+    fn drop_task_state(&mut self, task_id: TaskId) {
+        // This function is only called internally, so assume the node is known to be allocated.
+
+        // Overwrite this node and push it onto the free list.
+        self.nodes[task_id.as_usize()] = Node::Free {
+            next_free_task_id: self.first_free_task_id,
+        };
+        self.first_free_task_id = Some(task_id);
     }
 
     pub fn store_waker(&mut self, task_id: TaskId, waker: Waker) {
@@ -111,12 +123,8 @@ impl Reactor {
             waker.wake();
         }
 
-        if task_state.wake_has_happened && task_state.future_is_dropped {
-            // Overwrite this node and push it onto the free list.
-            self.nodes[task_id.as_usize()] = Node::Free {
-                next_free_task_id: self.first_free_task_id,
-            };
-            self.first_free_task_id = Some(task_id);
+        if task_state.ready_to_drop() {
+            self.drop_task_state(task_id);
         }
     }
 

@@ -10,5 +10,6 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies]
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
 ignition-api = { path = "../ignition-api" }
 wee_alloc = "0.4"
