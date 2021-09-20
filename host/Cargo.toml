@@ -6,8 +6,6 @@ members = [
     "ignition-blob",
     "ignition-blob-proto",
     "ignition-demo-9p-server",
-    "ignition-guest",
-    "ignition-hello-world",
     "ignition-host",
     "testable-file-system",
 ]

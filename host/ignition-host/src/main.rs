@@ -11,7 +11,12 @@ pub struct TaskId(pub u32);
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let engine = Engine::default();
-    let module = Module::from_file(&engine, "target/wasm32-unknown-unknown/release/opt.wasm")?;
+    let module = Module::from_file(
+        &engine,
+        std::env::args()
+            .nth(1)
+            .expect("expected a path to a wasm binary"),
+    )?;
 
     let mut linker = Linker::new(&engine);
     linker.func_wrap("ignition", "shutdown", api::shutdown)?;
