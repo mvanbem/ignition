@@ -1,8 +1,6 @@
 use core::convert::{TryFrom, TryInto};
 use core::num::TryFromIntError;
 
-use crate::sys;
-
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TaskId(u32);
 
@@ -11,6 +9,10 @@ impl TaskId {
 
     pub fn new(task_id: u32) -> Self {
         Self(task_id)
+    }
+
+    pub fn as_u32(self) -> u32 {
+        self.0
     }
 }
 
@@ -22,20 +24,8 @@ impl TryFrom<usize> for TaskId {
     }
 }
 
-impl From<sys::TaskId> for TaskId {
-    fn from(task_id: sys::TaskId) -> Self {
-        Self(task_id.0)
-    }
-}
-
-impl Into<usize> for TaskId {
-    fn into(self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl Into<sys::TaskId> for TaskId {
-    fn into(self) -> sys::TaskId {
-        sys::TaskId(self.0)
+impl From<TaskId> for usize {
+    fn from(task_id: TaskId) -> Self {
+        task_id.0 as usize
     }
 }

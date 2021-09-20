@@ -4,8 +4,8 @@ use core::task::Waker;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::free_list::FreeList;
-use crate::TaskId;
+use crate::runtime::free_list::FreeList;
+use crate::task_id::TaskId;
 
 lazy_static! {
     static ref REACTOR: Arc<Mutex<Reactor>> = Default::default();

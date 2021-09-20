@@ -1,5 +1,6 @@
+use std::convert::TryInto;
 use std::str::from_utf8;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::{SecondsFormat, Utc};
 use wasmtime::{Caller, Extern, Trap};
@@ -36,6 +37,12 @@ pub fn log(mut caller: Caller<'_, State>, ptr: u32, len: u32) -> Result<(), Trap
     Ok(())
 }
 
+pub fn impulse(mut caller: Caller<'_, State>, task_id: u32) {
+    let task_id = TaskId(task_id);
+
+    caller.data_mut().impulse_queue_mut().push_back(task_id);
+}
+
 pub fn sleep(mut caller: Caller<'_, State>, task_id: u32, usec: u32) {
     let task_id = TaskId(task_id);
     let duration = Duration::from_micros(usec.into());
@@ -47,4 +54,11 @@ pub fn sleep(mut caller: Caller<'_, State>, task_id: u32, usec: u32) {
             eprintln!("Unable to send on the wake queue: {}", e);
         }
     });
+}
+
+pub fn monotonic_time(caller: Caller<'_, State>) -> u64 {
+    (Instant::now() - caller.data().start_time())
+        .as_micros()
+        .try_into()
+        .unwrap()
 }

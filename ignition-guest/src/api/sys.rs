@@ -1,23 +1,6 @@
 //! Bindings for the Ignition C API.
 
-use core::convert::{TryFrom, TryInto};
 use core::ffi::c_void;
-use core::num::TryFromIntError;
-use core::time::Duration;
-
-#[repr(transparent)]
-pub struct TaskId(pub u32);
-
-#[repr(transparent)]
-pub struct Microseconds(pub u32);
-
-impl TryFrom<Duration> for Microseconds {
-    type Error = TryFromIntError;
-
-    fn try_from(duration: Duration) -> Result<Self, Self::Error> {
-        Ok(Microseconds(duration.as_micros().try_into()?))
-    }
-}
 
 #[link(wasm_import_module = "ignition")]
 extern "C" {
@@ -31,8 +14,15 @@ extern "C" {
     /// Immediately ends execution and destroys this instance.
     pub fn abort() -> !;
 
+    //
+    // Debug, test, and diagnostic functions.
+    //
+
     /// Emits a debug log message.
     pub fn log(ptr: *const c_void, len: usize);
+
+    /// Requests that wake() be called precisely once with the given task_id.
+    pub fn impulse(task_id: u32);
 
     //
     // Time Functions
@@ -40,5 +30,8 @@ extern "C" {
 
     /// Asynchronously starts a timer. After it elapses, wake() will be called precisely once with
     /// the given task_id.
-    pub fn sleep(task_id: TaskId, duration: Microseconds);
+    pub fn sleep(task_id: u32, usec: u32);
+
+    /// Gets the current time in microseconds according to a monotonic clock with unspecified epoch.
+    pub fn monotonic_time() -> u64;
 }

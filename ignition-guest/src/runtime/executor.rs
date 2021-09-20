@@ -6,8 +6,8 @@ use core::task::Context;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::executor::task_waker::TaskWaker;
-use crate::task::Task;
+use crate::runtime::executor::task_waker::TaskWaker;
+use crate::runtime::task::Task;
 
 lazy_static! {
     static ref EXECUTOR: Arc<Mutex<Executor>> = Default::default();
@@ -42,7 +42,7 @@ fn executor_run(arc: &Arc<Mutex<Executor>>) {
         // eventually be dropped, dropping the task only after it is no longer needed. If
         // incomplete, it will eventually be respawned when wakened.
         arc_waker.start_deferred_wake();
-        drop(arc_waker.task_mut().as_mut().unwrap().poll(&mut context));
+        let _ = arc_waker.task_mut().as_mut().unwrap().poll(&mut context);
         arc_waker.end_deferred_wake();
     }
 }
@@ -59,9 +59,9 @@ mod task_waker {
 
     use spin::Mutex;
 
-    use crate::executor::arc_waker::WakerTrait;
-    use crate::executor::EXECUTOR;
-    use crate::task::Task;
+    use crate::runtime::executor::arc_waker::WakerTrait;
+    use crate::runtime::executor::EXECUTOR;
+    use crate::runtime::task::Task;
 
     #[derive(Clone, Copy, PartialEq, Eq)]
     enum DeferredWake {
@@ -151,11 +151,11 @@ mod task_waker {
                     if let Some(task) = guard.take() {
                         EXECUTOR.lock().spawn(task);
                     } else {
-                        crate::log("*** duplicate wake!");
+                        crate::api::log("*** duplicate wake!");
                     }
                     return;
                 } else {
-                    crate::log(
+                    crate::api::log(
                         "TaskWaker::wake() failed to acquire the lock (this should be rare)",
                     );
                 }
