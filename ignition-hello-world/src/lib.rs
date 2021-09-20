@@ -29,6 +29,7 @@ fn init() {
         timers.push(sleep(Duration::ZERO));
     }
     executor::spawn(async move {
+        log("Waiting for timers...");
         let mut f: FuturesUnordered<_> = timers.into_iter().collect();
         while let Some(_) = f.next().await {}
         log("All timers have elapsed");

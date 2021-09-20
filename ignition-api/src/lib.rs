@@ -11,6 +11,7 @@ use core::time::Duration;
 use crate::task_id::TaskId;
 
 pub mod executor;
+mod free_list;
 mod reactor;
 mod sync;
 mod sys;

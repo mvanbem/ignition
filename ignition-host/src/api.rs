@@ -43,6 +43,8 @@ pub fn sleep(mut caller: Caller<'_, State>, task_id: u32, usec: u32) {
     let wake_queue_sender = caller.data_mut().wake_queue_sender().clone();
     tokio::spawn(async move {
         tokio::time::sleep(duration).await;
-        wake_queue_sender.send(task_id).await.unwrap();
+        if let Err(e) = wake_queue_sender.send(task_id).await {
+            eprintln!("Unable to send on the wake queue: {}", e);
+        }
     });
 }
