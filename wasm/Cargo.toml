@@ -1,5 +1,8 @@
 [workspace]
 members = [
+    "ignition-echo-client",
+    "ignition-echo-server",
     "ignition-guest",
-    "ignition-hello-world",
+    "ignition-guest-panic-abort",
+    "ignition-impulse-bench",
 ]

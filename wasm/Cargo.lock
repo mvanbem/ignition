@@ -77,19 +77,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "ignition-echo-client"
+version = "0.1.0"
+dependencies = [
+ "ignition-guest",
+ "ignition-guest-panic-abort",
+ "wee_alloc",
+]
+
+[[package]]
+name = "ignition-echo-server"
+version = "0.1.0"
+dependencies = [
+ "ignition-guest",
+ "ignition-guest-panic-abort",
+ "wee_alloc",
+]
+
+[[package]]
 name = "ignition-guest"
 version = "0.1.0"
 dependencies = [
+ "futures-io",
  "lazy_static",
+ "slab",
  "spin 0.9.2",
 ]
 
 [[package]]
-name = "ignition-hello-world"
+name = "ignition-guest-panic-abort"
+version = "0.1.0"
+dependencies = [
+ "ignition-guest",
+]
+
+[[package]]
+name = "ignition-impulse-bench"
 version = "0.1.0"
 dependencies = [
  "futures",
  "ignition-guest",
+ "ignition-guest-panic-abort",
  "wee_alloc",
 ]
 
@@ -140,6 +168,12 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "slab"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c307a32c1c5c437f38c7fd45d753050587732ba8628319fbdf12a7e289ccc590"
 
 [[package]]
 name = "spin"

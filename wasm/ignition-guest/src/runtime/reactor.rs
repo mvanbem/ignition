@@ -1,11 +1,12 @@
 use alloc::sync::Arc;
+use core::convert::TryInto;
 use core::task::Waker;
+use slab::Slab;
 
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::runtime::free_list::FreeList;
-use crate::task_id::TaskId;
+use crate::api::sys::TaskId;
 
 lazy_static! {
     static ref REACTOR: Arc<Mutex<Reactor>> = Default::default();
@@ -13,6 +14,10 @@ lazy_static! {
 
 pub fn new_task() -> TaskId {
     REACTOR.lock().new_task()
+}
+
+pub fn drop_unused_task(task_id: TaskId) {
+    REACTOR.lock().drop_unused_task(task_id);
 }
 
 pub fn future_dropped(task_id: TaskId) {
@@ -23,39 +28,51 @@ pub fn store_waker(task_id: TaskId, waker: Waker) {
     REACTOR.lock().store_waker(task_id, waker);
 }
 
-pub fn dispatch_wake(task_id: TaskId) {
-    REACTOR.lock().dispatch_wake(task_id);
+pub fn dispatch_wake(task_id: TaskId, param: usize) {
+    REACTOR.lock().dispatch_wake(task_id, param);
 }
 
-pub fn wake_has_happened(task_id: TaskId) -> bool {
-    REACTOR.lock().wake_has_happened(task_id)
+pub fn get_wake_param(task_id: TaskId) -> Option<usize> {
+    REACTOR.lock().get_wake_param(task_id)
 }
 
 #[derive(Default)]
 struct Reactor {
-    tasks: FreeList<TaskId, TaskState>,
+    tasks: Slab<TaskState>,
 }
 
-#[derive(Default)]
 struct TaskState {
     waker: Option<Waker>,
-    wake_has_happened: bool,
+    // None before wakened and Some after.
+    wake_param: Option<usize>,
     future_is_dropped: bool,
 }
 
 impl TaskState {
+    fn new() -> Self {
+        Self {
+            waker: None,
+            wake_param: None,
+            future_is_dropped: false,
+        }
+    }
+
     fn ready_to_drop(&self) -> bool {
-        self.wake_has_happened && self.future_is_dropped
+        self.wake_param.is_some() && self.future_is_dropped
     }
 }
 
 impl Reactor {
     fn new_task(&mut self) -> TaskId {
-        self.tasks.insert(TaskState::default())
+        TaskId(self.tasks.insert(TaskState::new()).try_into().unwrap())
+    }
+
+    fn drop_unused_task(&mut self, task_id: TaskId) {
+        self.tasks.remove(task_id.0 as usize);
     }
 
     fn future_dropped(&mut self, task_id: TaskId) {
-        let task_state = self.tasks.get_mut(task_id);
+        let task_state = self.tasks.get_mut(task_id.0 as usize).unwrap();
         task_state.future_is_dropped = true;
 
         if task_state.ready_to_drop() {
@@ -64,17 +81,17 @@ impl Reactor {
     }
 
     fn drop_task_state(&mut self, task_id: TaskId) {
-        self.tasks.remove(task_id);
+        self.tasks.remove(task_id.0 as usize);
     }
 
     fn store_waker(&mut self, task_id: TaskId, waker: Waker) {
-        let task_state = self.tasks.get_mut(task_id);
+        let task_state = self.tasks.get_mut(task_id.0 as usize).unwrap();
         task_state.waker = Some(waker);
     }
 
-    fn dispatch_wake(&mut self, task_id: TaskId) {
-        let task_state = self.tasks.get_mut(task_id);
-        task_state.wake_has_happened = true;
+    fn dispatch_wake(&mut self, task_id: TaskId, param: usize) {
+        let task_state = self.tasks.get_mut(task_id.0 as usize).unwrap();
+        task_state.wake_param = Some(param);
         if let Some(waker) = task_state.waker.take() {
             waker.wake();
         }
@@ -84,7 +101,7 @@ impl Reactor {
         }
     }
 
-    fn wake_has_happened(&self, task_id: TaskId) -> bool {
-        self.tasks.get(task_id).wake_has_happened
+    fn get_wake_param(&self, task_id: TaskId) -> Option<usize> {
+        self.tasks.get(task_id.0 as usize).unwrap().wake_param
     }
 }

@@ -1,4 +1,4 @@
-/host/target/
+/target/
 /vm-bootstrap/build/
 /vm-bootstrap/packages/
 /wasm/target/

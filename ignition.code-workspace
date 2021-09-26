@@ -9,6 +9,11 @@
 			"**/target/**": true,
 			"**/vm-bootstrap/build/**": true,
 			"**/vm-bootstrap/packages/**": true,
-		}
-	}
+		},
+		"rust-analyzer.checkOnSave.allTargets": false,
+		"rust-analyzer.linkedProjects": [
+			"Cargo.toml",
+			"wasm/Cargo.toml",
+		],
+	},
 }
