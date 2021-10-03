@@ -1,7 +1,3 @@
-#![no_std]
-
-extern crate alloc;
-
 use crate::api::sys::TaskId;
 use crate::runtime::executor::run;
 use crate::runtime::reactor::dispatch_wake;

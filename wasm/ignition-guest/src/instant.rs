@@ -1,5 +1,5 @@
-use core::ops::Sub;
-use core::time::Duration;
+use std::ops::Sub;
+use std::time::Duration;
 
 /// A measurement of a monotonically nondecreasing clock, analogous to [`std::time::Instant`].
 pub struct Instant(u64);

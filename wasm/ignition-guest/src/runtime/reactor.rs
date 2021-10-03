@@ -1,10 +1,10 @@
-use alloc::sync::Arc;
-use core::convert::TryInto;
-use core::task::Waker;
-use slab::Slab;
+use std::convert::TryInto;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::task::Waker;
 
 use lazy_static::lazy_static;
-use spin::Mutex;
+use slab::Slab;
 
 use crate::api::sys::TaskId;
 
@@ -13,27 +13,27 @@ lazy_static! {
 }
 
 pub fn new_task() -> TaskId {
-    REACTOR.lock().new_task()
+    REACTOR.lock().unwrap().new_task()
 }
 
 pub fn drop_unused_task(task_id: TaskId) {
-    REACTOR.lock().drop_unused_task(task_id);
+    REACTOR.lock().unwrap().drop_unused_task(task_id);
 }
 
 pub fn future_dropped(task_id: TaskId) {
-    REACTOR.lock().future_dropped(task_id);
+    REACTOR.lock().unwrap().future_dropped(task_id);
 }
 
 pub fn store_waker(task_id: TaskId, waker: Waker) {
-    REACTOR.lock().store_waker(task_id, waker);
+    REACTOR.lock().unwrap().store_waker(task_id, waker);
 }
 
 pub fn dispatch_wake(task_id: TaskId, param: usize) {
-    REACTOR.lock().dispatch_wake(task_id, param);
+    REACTOR.lock().unwrap().dispatch_wake(task_id, param);
 }
 
 pub fn get_wake_param(task_id: TaskId) -> Option<usize> {
-    REACTOR.lock().get_wake_param(task_id)
+    REACTOR.lock().unwrap().get_wake_param(task_id)
 }
 
 #[derive(Default)]

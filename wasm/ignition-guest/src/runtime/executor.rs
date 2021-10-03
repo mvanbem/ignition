@@ -1,10 +1,10 @@
-use alloc::collections::VecDeque;
-use alloc::sync::Arc;
-use core::future::Future;
-use core::task::Context;
+use std::collections::VecDeque;
+use std::future::Future;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::task::Context;
 
 use lazy_static::lazy_static;
-use spin::Mutex;
 
 use crate::runtime::executor::task_waker::TaskWaker;
 use crate::runtime::task::Task;
@@ -18,7 +18,7 @@ pub(crate) fn run() {
 }
 
 pub fn spawn(future: impl Future<Output = ()> + Send + 'static) {
-    EXECUTOR.lock().spawn(Task::new(future));
+    EXECUTOR.lock().unwrap().spawn(Task::new(future));
 }
 
 #[derive(Default)]
@@ -28,7 +28,7 @@ struct Executor {
 
 fn executor_run(arc: &Arc<Mutex<Executor>>) {
     loop {
-        let mut inner = arc.lock();
+        let mut inner = arc.lock().unwrap();
         let task = match inner.awake.pop_front() {
             Some(task) => task,
             None => break,
@@ -54,10 +54,9 @@ impl Executor {
 }
 
 mod task_waker {
-    use core::ops::DerefMut;
-    use core::sync::atomic::{AtomicU8, Ordering};
-
-    use spin::Mutex;
+    use std::ops::DerefMut;
+    use std::sync::atomic::{AtomicU8, Ordering};
+    use std::sync::{Mutex, TryLockError};
 
     use crate::runtime::executor::arc_waker::WakerTrait;
     use crate::runtime::executor::EXECUTOR;
@@ -117,7 +116,7 @@ mod task_waker {
         }
 
         pub fn task_mut(&self) -> impl DerefMut<Target = Option<Task>> + '_ {
-            self.task.lock()
+            self.task.lock().unwrap()
         }
     }
 
@@ -147,17 +146,21 @@ mod task_waker {
 
                 // Falling through means we need to attempt an immediate wake. If the lock is
                 // unavailable, assume the task switched to a deferred wake and try again.
-                if let Some(mut guard) = self.task.try_lock() {
-                    if let Some(task) = guard.take() {
-                        EXECUTOR.lock().spawn(task);
-                    } else {
-                        crate::api::log("*** duplicate wake!");
+                match self.task.try_lock() {
+                    Ok(mut guard) => {
+                        if let Some(task) = guard.take() {
+                            EXECUTOR.lock().unwrap().spawn(task);
+                        } else {
+                            crate::api::log("*** duplicate wake!");
+                        }
+                        return;
                     }
-                    return;
-                } else {
-                    crate::api::log(
-                        "TaskWaker::wake() failed to acquire the lock (this should be rare)",
-                    );
+                    Err(TryLockError::WouldBlock) => {
+                        crate::api::log(
+                            "TaskWaker::wake() failed to acquire the lock (this should be rare)",
+                        );
+                    }
+                    Err(TryLockError::Poisoned(_)) => panic!(),
                 }
             }
         }
@@ -165,9 +168,8 @@ mod task_waker {
 }
 
 mod arc_waker {
-    use core::task::{RawWaker, RawWakerVTable, Waker};
-
-    use alloc::sync::Arc;
+    use std::sync::Arc;
+    use std::task::{RawWaker, RawWakerVTable, Waker};
 
     pub trait WakerTrait {
         fn wake(&self);

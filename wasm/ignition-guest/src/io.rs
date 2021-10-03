@@ -1,6 +1,4 @@
-use core::mem::MaybeUninit;
-
-use alloc::vec::Vec;
+use std::mem::MaybeUninit;
 
 use crate::api::sys;
 use crate::api::wait::wait;

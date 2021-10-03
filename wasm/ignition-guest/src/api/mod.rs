@@ -1,13 +1,13 @@
-use core::convert::TryInto;
-use core::ffi::c_void;
-use core::time::Duration;
-
-pub(crate) mod sys;
-pub(crate) mod wait;
+use std::convert::TryInto;
+use std::ffi::c_void;
+use std::time::Duration;
 
 use crate::runtime::reactor;
 
 use self::wait::wait;
+
+pub(crate) mod sys;
+pub(crate) mod wait;
 
 pub fn shutdown() {
     // SAFETY: No special considerations.

@@ -3,6 +3,5 @@ members = [
     "ignition-echo-client",
     "ignition-echo-server",
     "ignition-guest",
-    "ignition-guest-panic-abort",
     "ignition-impulse-bench",
 ]

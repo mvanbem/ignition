@@ -1,5 +1,5 @@
-use core::mem::MaybeUninit;
-use core::ops::Deref;
+use std::mem::MaybeUninit;
+use std::ops::Deref;
 
 use crate::api::sys::{self, IoHandle, RpcClientHandle};
 use crate::api::wait::wait;

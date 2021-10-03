@@ -1,26 +1,11 @@
-#![no_std]
-#![feature(core_intrinsics, default_alloc_error_handler)]
+use std::str::from_utf8;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
-extern crate alloc;
-extern crate ignition_guest_panic_abort;
-
-use core::str::from_utf8;
-use core::sync::atomic::{AtomicUsize, Ordering};
-
-use alloc::format;
-use alloc::sync::Arc;
 use ignition_guest::api::{log, shutdown};
 use ignition_guest::rpc_client::RpcClient;
 use ignition_guest::runtime::spawn;
 use ignition_guest::{emit_wake, Instant};
-use wee_alloc::WeeAlloc;
-
-#[global_allocator]
-static ALLOC: WeeAlloc = WeeAlloc::INIT;
-
-fn ceilf64(x: f64) -> f64 {
-    unsafe { core::intrinsics::ceilf64(x) }
-}
 
 const MESSAGES: &[&str] = &["abc123", "def456", "ghi789", "hello, world", "asdfjkl;"];
 
@@ -53,7 +38,7 @@ fn init() {
                 log(&format!(
                     "Got response {:?} in {} us",
                     from_utf8(&response).unwrap(),
-                    ceilf64(elapsed_seconds * 1e6),
+                    (elapsed_seconds * 1e6).ceil(),
                 ));
 
                 if shared_state.counter.fetch_sub(1, Ordering::SeqCst) == 1 {

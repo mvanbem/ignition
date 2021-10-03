@@ -12,5 +12,3 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ignition-guest = { path = "../ignition-guest" }
-ignition-guest-panic-abort = { path = "../ignition-guest-panic-abort" }
-wee_alloc = "0.4"

@@ -1,6 +1,6 @@
 //! Bindings for the Ignition C API.
 
-use core::ffi::c_void;
+use std::ffi::c_void;
 
 #[link(wasm_import_module = "ignition")]
 extern "C" {

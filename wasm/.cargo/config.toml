@@ -2,4 +2,4 @@
 target = "wasm32-unknown-unknown"
 
 [unstable]
-build-std = ["core", "alloc"]
+build-std = ["std", "panic_abort"]

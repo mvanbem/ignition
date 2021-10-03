@@ -1,22 +1,11 @@
-#![no_std]
-#![feature(core_intrinsics, default_alloc_error_handler)]
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
-extern crate alloc;
-extern crate ignition_guest_panic_abort;
-
-use core::sync::atomic::{AtomicUsize, Ordering};
-use core::time::Duration;
-
-use alloc::boxed::Box;
-use alloc::sync::Arc;
 use ignition_guest::api::{shutdown, sleep};
 use ignition_guest::emit_wake;
 use ignition_guest::rpc_server::RpcServerBuilder;
 use ignition_guest::runtime::spawn;
-use wee_alloc::WeeAlloc;
-
-#[global_allocator]
-static ALLOC: WeeAlloc = WeeAlloc::INIT;
 
 emit_wake!(init);
 

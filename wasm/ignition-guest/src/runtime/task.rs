@@ -1,7 +1,6 @@
-use alloc::boxed::Box;
-use core::future::Future;
-use core::pin::Pin;
-use core::task::{Context, Poll};
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 pub struct Task {
     future: Pin<Box<dyn Future<Output = ()> + Send>>,

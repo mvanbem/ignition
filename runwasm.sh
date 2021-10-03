@@ -85,7 +85,7 @@ for crate_name in "${crates[@]}"; do
     fi
     built_crates["$crate_name"]=
 
-    (cd wasm && cargo -q build -p "$crate_name" $extra_cargo_flags)
+    (cd wasm && cargo build -p "$crate_name" $extra_cargo_flags)
     if [ $profile = release ]; then
         wasm-opt -o "$final_wasm_path" -Oz "$build_dir/$build_artifact_name.wasm"
     fi
@@ -93,4 +93,4 @@ for crate_name in "${crates[@]}"; do
 done
 
 # Run the host and pass it the path to the optimized wasm.
-cargo -q run -p ignition-host --release -- "${wasm_paths[@]}"
+cargo run -p ignition-host --release -- "${wasm_paths[@]}"
