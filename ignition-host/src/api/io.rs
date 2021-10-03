@@ -17,10 +17,12 @@ pub fn io_read(
 ) -> Result<u32, Trap> {
     let memory = get_memory(&mut caller)?;
     let (process_state, dst) = get_state_and_map_mut_ptr(caller.as_context_mut(), memory, ptr)?;
-    let result = process_state
-        .lock()
-        .unwrap()
-        .io_read(TaskId(task_id), io as _, dst, len)?;
+    let result = unsafe {
+        process_state
+            .lock()
+            .unwrap()
+            .io_read(TaskId(task_id), io as _, dst, len)
+    }?;
     match result {
         Poll::Ready(n) => {
             let mut n_data = get_slice_mut(caller.as_context_mut(), memory, n_ptr, 4)?;
@@ -41,10 +43,12 @@ pub fn io_write(
 ) -> Result<u32, Trap> {
     let memory = get_memory(&mut caller)?;
     let (process_state, src) = get_state_and_map_ptr(caller.as_context_mut(), memory, ptr)?;
-    let result = process_state
-        .lock()
-        .unwrap()
-        .io_write(TaskId(task_id), io, src, len)?;
+    let result = unsafe {
+        process_state
+            .lock()
+            .unwrap()
+            .io_write(TaskId(task_id), io, src, len)
+    }?;
     match result {
         Poll::Ready(n) => {
             let mut n_data = get_slice_mut(caller.as_context_mut(), memory, n_ptr, 4)?;

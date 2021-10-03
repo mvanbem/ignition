@@ -25,30 +25,34 @@ impl IoObject {
         }
     }
 
-    pub fn read(
+    pub unsafe fn read(
         &mut self,
         wake_queue_sender: &UnboundedSender<WakeParams>,
         task_id: TaskId,
         dst: *mut u8,
         len: u32,
     ) -> Poll<u32> {
-        self.reader
-            .as_mut()
-            .unwrap()
-            .read(wake_queue_sender, task_id, dst, len)
+        unsafe {
+            self.reader
+                .as_mut()
+                .unwrap()
+                .read(wake_queue_sender, task_id, dst, len)
+        }
     }
 
-    pub fn write(
+    pub unsafe fn write(
         &mut self,
         wake_queue_sender: &UnboundedSender<WakeParams>,
         task_id: TaskId,
         src: *const u8,
         len: u32,
     ) -> Poll<u32> {
-        self.writer
-            .as_mut()
-            .unwrap()
-            .write(wake_queue_sender, task_id, src, len)
+        unsafe {
+            self.writer
+                .as_mut()
+                .unwrap()
+                .write(wake_queue_sender, task_id, src, len)
+        }
     }
 
     pub fn close(self) {

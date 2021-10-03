@@ -84,7 +84,7 @@ impl InnerPipe {
 }
 
 impl PipeReader {
-    pub fn read(
+    pub unsafe fn read(
         &self,
         read_wake_queue_sender: &UnboundedSender<WakeParams>,
         read_task_id: TaskId,
@@ -141,7 +141,7 @@ impl PipeReader {
 }
 
 impl PipeWriter {
-    pub fn write(
+    pub unsafe fn write(
         &self,
         write_wake_queue_sender: &UnboundedSender<WakeParams>,
         write_task_id: TaskId,

@@ -65,7 +65,7 @@ impl ProcessState {
         self.start_time
     }
 
-    pub fn io_read(
+    pub unsafe fn io_read(
         &mut self,
         task_id: TaskId,
         io: u32,
@@ -76,10 +76,10 @@ impl ProcessState {
             .io_objects
             .get_mut(io as _)
             .ok_or_else(|| Trap::new("bad IO handle"))?;
-        Ok(io.read(&self.wake_queue_sender, task_id, dst, len))
+        Ok(unsafe { io.read(&self.wake_queue_sender, task_id, dst, len) })
     }
 
-    pub fn io_write(
+    pub unsafe fn io_write(
         &mut self,
         task_id: TaskId,
         io: u32,
@@ -90,7 +90,7 @@ impl ProcessState {
             .io_objects
             .get_mut(io as _)
             .ok_or_else(|| Trap::new("bad IO handle"))?;
-        Ok(io.write(&self.wake_queue_sender, task_id, src, len))
+        Ok(unsafe { io.write(&self.wake_queue_sender, task_id, src, len) })
     }
 
     pub fn io_close(&mut self, io: u32) -> Result<(), Trap> {
