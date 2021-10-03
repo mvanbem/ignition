@@ -1,8 +1,8 @@
-use std::mem::replace;
 use std::ptr::copy_nonoverlapping;
 use std::sync::{Arc, Mutex};
 use std::task::Poll;
 
+use replace_with::{replace_with_or_abort, replace_with_or_abort_and_return};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{TaskId, WakeParams};
@@ -42,7 +42,6 @@ enum PipeState {
         src_len: u32,
     },
     Closed,
-    Unreachable,
 }
 
 pub fn pipe() -> (PipeReader, PipeWriter) {
@@ -59,8 +58,8 @@ pub fn pipe() -> (PipeReader, PipeWriter) {
 
 impl InnerPipe {
     fn close(&mut self) {
-        match replace(&mut self.state, PipeState::Unreachable) {
-            PipeState::Idle => self.state = PipeState::Closed,
+        replace_with_or_abort(&mut self.state, |state| match state {
+            PipeState::Idle => PipeState::Closed,
             PipeState::PendingRead {
                 read_wake_queue_sender,
                 read_task_id,
@@ -72,14 +71,13 @@ impl InnerPipe {
                         param: 0,
                     })
                     .unwrap();
-                self.state = PipeState::Closed;
+                PipeState::Closed
             }
             PipeState::PendingWrite { .. } => {
-                todo!("haven't implemented gracefully writing to a closed pipe")
+                todo!("write to a closed pipe")
             }
-            PipeState::Closed => self.state = PipeState::Closed,
-            PipeState::Unreachable => unreachable!(),
-        }
+            PipeState::Closed => PipeState::Closed,
+        });
     }
 }
 
@@ -96,17 +94,19 @@ impl PipeReader {
         }
 
         let mut inner = self.inner.lock().unwrap();
-        match replace(&mut inner.state, PipeState::Unreachable) {
-            PipeState::Idle => {
-                inner.state = PipeState::PendingRead {
+        replace_with_or_abort_and_return(&mut inner.state, |state| match state {
+            PipeState::Idle => (
+                Poll::Pending,
+                PipeState::PendingRead {
                     read_wake_queue_sender: read_wake_queue_sender.clone(),
                     read_task_id,
                     dst: SendPointerMut(dst),
                     dst_len,
-                };
-                Poll::Pending
+                },
+            ),
+            PipeState::PendingRead { .. } => {
+                todo!("read with a read already pending")
             }
-            PipeState::PendingRead { .. } => panic!(),
             PipeState::PendingWrite {
                 write_wake_queue_sender,
                 write_task_id,
@@ -124,15 +124,10 @@ impl PipeReader {
                         param: len,
                     })
                     .unwrap();
-                inner.state = PipeState::Idle;
-                Poll::Ready(len)
+                (Poll::Ready(len), PipeState::Idle)
             }
-            PipeState::Closed => {
-                inner.state = PipeState::Closed;
-                Poll::Ready(0)
-            }
-            PipeState::Unreachable => unreachable!(),
-        }
+            PipeState::Closed => (Poll::Ready(0), PipeState::Closed),
+        })
     }
 
     pub fn close(&self) {
@@ -153,16 +148,16 @@ impl PipeWriter {
         }
 
         let mut inner = self.inner.lock().unwrap();
-        match replace(&mut inner.state, PipeState::Unreachable) {
-            PipeState::Idle => {
-                inner.state = PipeState::PendingWrite {
+        replace_with_or_abort_and_return(&mut inner.state, |state| match state {
+            PipeState::Idle => (
+                Poll::Pending,
+                PipeState::PendingWrite {
                     write_wake_queue_sender: write_wake_queue_sender.clone(),
                     write_task_id,
                     src: SendPointer(src),
                     src_len,
-                };
-                Poll::Pending
-            }
+                },
+            ),
             PipeState::PendingRead {
                 read_wake_queue_sender,
                 read_task_id,
@@ -177,15 +172,11 @@ impl PipeWriter {
                         param: len,
                     })
                     .unwrap();
-                inner.state = PipeState::Idle;
-                Poll::Ready(len)
+                (Poll::Ready(len), PipeState::Idle)
             }
-            PipeState::PendingWrite { .. } => panic!(),
-            PipeState::Closed => {
-                todo!("haven't implemented gracefully writing to a closed pipe")
-            }
-            PipeState::Unreachable => unreachable!(),
-        }
+            PipeState::PendingWrite { .. } => todo!("write with a write already pending"),
+            PipeState::Closed => todo!("write to a closed pipe"),
+        })
     }
 
     pub fn close(&self) {

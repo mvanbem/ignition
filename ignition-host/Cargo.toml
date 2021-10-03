@@ -12,6 +12,7 @@ byteorder = "1"
 chrono = "0.4"
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 lazy_static = "1"
+replace_with = "0.1"
 slab = "0.4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
 wasmtime = "0.30"
