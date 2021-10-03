@@ -1,7 +1,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use std::env::args;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use futures::stream::FuturesUnordered;
@@ -9,7 +9,7 @@ use futures::StreamExt;
 use tokio::spawn;
 use wasmtime::{Engine, Linker, Module, Store};
 
-use crate::process::state::ProcessState;
+use crate::process::process::Process;
 
 mod api;
 mod interop;
@@ -101,15 +101,15 @@ async fn start_module(engine: &Engine, path: &str, pid: usize) -> Result<()> {
         api::rpc_server::rpc_server_get_request,
     )?;
 
-    let (state, mut wake_queue_receiver) = ProcessState::new(pid);
+    let (state, mut wake_queue_receiver) = Process::new(pid);
     state.wake_queue_sender().send(WakeParams::INIT).unwrap();
-    let mut store = Store::new(engine, Arc::new(Mutex::new(state)));
+    let mut store = Store::new(engine, Arc::new(state));
 
     let instance = linker.instantiate(&mut store, &module)?;
     let wake = instance.get_typed_func::<(u32, u32), (), _>(&mut store, "wake")?;
 
     // Dispatch wake events.
-    while !store.data().lock().unwrap().is_shutdown() {
+    while !store.data().is_shutdown() {
         let params = wake_queue_receiver.recv().await.unwrap();
         wake.call(&mut store, params.into())?;
     }

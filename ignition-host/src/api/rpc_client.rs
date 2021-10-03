@@ -1,14 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::task::Poll;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use wasmtime::{AsContext, AsContextMut, Caller, Trap};
 
 use crate::util::{get_memory, get_slice_mut, get_str};
-use crate::{ProcessState, TaskId};
+use crate::{Process, TaskId};
 
 pub fn rpc_client_create(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     service_name_ptr: u32,
     service_name_len: u32,
 ) -> Result<u32, Trap> {
@@ -21,26 +21,22 @@ pub fn rpc_client_create(
     )?
     .to_owned();
 
-    Ok(caller
-        .data()
-        .lock()
-        .unwrap()
-        .rpc_client_create(service_name))
+    Ok(caller.data().rpc_client_create(service_name))
 }
 
 pub fn rpc_client_wait_healthy(
-    caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    caller: Caller<'_, Arc<Process>>,
     task_id: u32,
     rpc_client: u32,
 ) -> Result<u32, Trap> {
-    match ProcessState::rpc_client_wait_healthy(caller.data(), TaskId(task_id), rpc_client)? {
+    match Process::rpc_client_wait_healthy(caller.data(), TaskId(task_id), rpc_client)? {
         Poll::Ready(()) => Ok(0),
         Poll::Pending => Ok(1),
     }
 }
 
 pub fn rpc_client_request(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     rpc_client: u32,
     method_name_ptr: u32,
     method_name_len: u32,
@@ -57,7 +53,7 @@ pub fn rpc_client_request(
     .to_owned();
 
     let (request_io, response_io) =
-        ProcessState::rpc_client_request(caller.data(), rpc_client, &method_name)?;
+        Process::rpc_client_request(caller.data(), rpc_client, &method_name)?;
 
     let mut request_io_data = get_slice_mut(caller.as_context_mut(), memory, request_io_ptr, 4)?;
     request_io_data

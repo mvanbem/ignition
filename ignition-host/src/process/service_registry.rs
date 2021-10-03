@@ -5,7 +5,7 @@ use std::task::Poll;
 
 use lazy_static::lazy_static;
 
-use crate::process::state::ProcessState;
+use crate::process::process::Process;
 use crate::util::pointer_identity_arc::PointerIdentityArc;
 use crate::{TaskId, WakeParams};
 
@@ -32,8 +32,6 @@ impl ServiceRegistry {
                 // putting an async queue in here.
                 entry
                     .process
-                    .lock()
-                    .unwrap()
                     .wake_queue_sender()
                     .send(WakeParams {
                         task_id: entry.task_id,
@@ -53,7 +51,7 @@ impl ServiceRegistry {
 
     pub fn wait_for_server(
         &self,
-        process: &Arc<Mutex<ProcessState>>,
+        process: &Arc<Process>,
         task_id: TaskId,
         service_name: Cow<str>,
     ) -> Poll<()> {
@@ -88,13 +86,13 @@ impl ServiceRegistry {
 
 #[derive(Hash, PartialEq, Eq)]
 struct ProcessTask {
-    process: PointerIdentityArc<Mutex<ProcessState>>,
+    process: PointerIdentityArc<Process>,
     task_id: TaskId,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct RpcServerRef {
-    pub process: PointerIdentityArc<Mutex<ProcessState>>,
+    pub process: PointerIdentityArc<Process>,
     pub rpc_server: u32,
 }
 

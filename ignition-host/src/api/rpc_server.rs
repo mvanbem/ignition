@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::task::Poll;
 
 use wasmtime::{AsContext, AsContextMut, Caller, Trap};
@@ -6,10 +6,10 @@ use wasmtime::{AsContext, AsContextMut, Caller, Trap};
 use crate::interop::rpc::{RpcMetadata, RpcServerParams};
 use crate::interop::{FromWasm, ToWasm, Wasm};
 use crate::util::{get_memory, get_slice, get_slice_mut};
-use crate::{ProcessState, TaskId};
+use crate::{Process, TaskId};
 
 pub fn rpc_server_create(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     params_ptr: u32,
 ) -> Result<u32, Trap> {
     let memory = get_memory(&mut caller)?;
@@ -21,11 +21,11 @@ pub fn rpc_server_create(
     )?;
 
     let params = RpcServerParams::from_wasm(caller.as_context(), memory, &mut params_data)?;
-    Ok(ProcessState::rpc_server_create(caller.data(), &params))
+    Ok(Process::rpc_server_create(caller.data(), &params))
 }
 
 pub fn rpc_server_get_request(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     task_id: u32,
     rpc_server: u32,
     metadata_ptr: u32,
@@ -34,8 +34,6 @@ pub fn rpc_server_get_request(
 
     let result = caller
         .data()
-        .lock()
-        .unwrap()
         .rpc_server_get_request(TaskId(task_id), rpc_server)?;
     match result {
         Poll::Ready(metadata) => {

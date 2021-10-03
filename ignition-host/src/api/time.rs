@@ -1,16 +1,16 @@
 use std::convert::TryInto;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use wasmtime::Caller;
 
-use crate::{ProcessState, TaskId, WakeParams};
+use crate::{Process, TaskId, WakeParams};
 
-pub fn sleep(caller: Caller<'_, Arc<Mutex<ProcessState>>>, task_id: u32, usec: u32) {
+pub fn sleep(caller: Caller<'_, Arc<Process>>, task_id: u32, usec: u32) {
     let task_id = TaskId(task_id);
     let duration = Duration::from_micros(usec.into());
 
-    let wake_queue_sender = caller.data().lock().unwrap().wake_queue_sender().clone();
+    let wake_queue_sender = caller.data().wake_queue_sender().clone();
     tokio::spawn(async move {
         tokio::time::sleep(duration).await;
         wake_queue_sender
@@ -19,8 +19,8 @@ pub fn sleep(caller: Caller<'_, Arc<Mutex<ProcessState>>>, task_id: u32, usec: u
     });
 }
 
-pub fn monotonic_time(caller: Caller<'_, Arc<Mutex<ProcessState>>>) -> u64 {
-    (Instant::now() - caller.data().lock().unwrap().start_time())
+pub fn monotonic_time(caller: Caller<'_, Arc<Process>>) -> u64 {
+    (Instant::now() - caller.data().start_time())
         .as_micros()
         .try_into()
         .unwrap()

@@ -1,14 +1,15 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::task::Poll;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use wasmtime::{AsContextMut, Caller, Trap};
 
+use crate::process::process::Process;
 use crate::util::{get_memory, get_slice_mut, get_state_and_map_mut_ptr, get_state_and_map_ptr};
-use crate::{ProcessState, TaskId};
+use crate::TaskId;
 
 pub fn io_read(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     task_id: u32,
     io: u32,
     ptr: u32,
@@ -17,12 +18,7 @@ pub fn io_read(
 ) -> Result<u32, Trap> {
     let memory = get_memory(&mut caller)?;
     let (process_state, dst) = get_state_and_map_mut_ptr(caller.as_context_mut(), memory, ptr)?;
-    let result = unsafe {
-        process_state
-            .lock()
-            .unwrap()
-            .io_read(TaskId(task_id), io as _, dst, len)
-    }?;
+    let result = unsafe { process_state.io_read(TaskId(task_id), io as _, dst, len) }?;
     match result {
         Poll::Ready(n) => {
             let mut n_data = get_slice_mut(caller.as_context_mut(), memory, n_ptr, 4)?;
@@ -34,7 +30,7 @@ pub fn io_read(
 }
 
 pub fn io_write(
-    mut caller: Caller<'_, Arc<Mutex<ProcessState>>>,
+    mut caller: Caller<'_, Arc<Process>>,
     task_id: u32,
     io: u32,
     ptr: u32,
@@ -43,12 +39,7 @@ pub fn io_write(
 ) -> Result<u32, Trap> {
     let memory = get_memory(&mut caller)?;
     let (process_state, src) = get_state_and_map_ptr(caller.as_context_mut(), memory, ptr)?;
-    let result = unsafe {
-        process_state
-            .lock()
-            .unwrap()
-            .io_write(TaskId(task_id), io, src, len)
-    }?;
+    let result = unsafe { process_state.io_write(TaskId(task_id), io, src, len) }?;
     match result {
         Poll::Ready(n) => {
             let mut n_data = get_slice_mut(caller.as_context_mut(), memory, n_ptr, 4)?;
@@ -59,6 +50,6 @@ pub fn io_write(
     }
 }
 
-pub fn io_close(caller: Caller<'_, Arc<Mutex<ProcessState>>>, io: u32) -> Result<(), Trap> {
-    caller.data().lock().unwrap().io_close(io)
+pub fn io_close(caller: Caller<'_, Arc<Process>>, io: u32) -> Result<(), Trap> {
+    caller.data().io_close(io)
 }
